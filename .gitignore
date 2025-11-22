@@ -205,3 +205,33 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+
+# Project specific
+api-gabi-logic/
+local_config.py
+*.pem
+*.key
+
+# Secrets (IMPORTANT: Never commit API keys!)
+.env
+.env.local
+.env.*.local
+*_secret
+*_key
+
+# Docker volumes
+postgres_data/
+pgdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Keep our docs/ but exclude legacy/build directories
+docs/_build/
+docs/
+docs/_old/
