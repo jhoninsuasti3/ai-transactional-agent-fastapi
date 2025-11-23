@@ -234,4 +234,12 @@ pgdata/
 # Keep our docs/ but exclude legacy/build directories
 docs/_build/
 docs/
-docs/_old/
+
+# Reference projects (keep locally, don't commit)
+api-gabi-logic/
+agentes-langgraph-main/
+insights_backend/
+
+# Notebooks (optional: keep experiments local)
+notebooks/*.ipynb
+!notebooks/README.md
