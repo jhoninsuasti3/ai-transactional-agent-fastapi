@@ -1,126 +1,71 @@
-"""Simple Mock Transaction API - Simulates external payment service.
+"""
+Mock Transaction API - Simulates external payment service.
 
-This is intentionally simple - the real architecture is in apps/.
+This is a simple mock API service that simulates an external transaction
+processing system. It implements realistic behaviors like latency, random
+failures, and state transitions.
+
+Run with: uvicorn mock_api.main:app --reload --port 8001
 """
 
-import asyncio
-import random
-import uuid
 from datetime import datetime
-from enum import Enum
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Mock Transaction API", version="1.0.0")
+from mock_api.routers import transactions
 
-# Simple in-memory storage
-transactions = {}
+# Create FastAPI app
+app = FastAPI(
+    title="Mock Transaction API",
+    description="Mock API for simulating external transaction processing service",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify allowed origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class TransactionStatus(str, Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-class ValidateRequest(BaseModel):
-    recipient_phone: str
-    amount: float = Field(gt=0)
-
-
-class ValidateResponse(BaseModel):
-    is_valid: bool
-    error: str | None = None
-
-
-class ExecuteRequest(BaseModel):
-    recipient_phone: str
-    amount: float = Field(gt=0)
-
-
-class ExecuteResponse(BaseModel):
-    transaction_id: str
-    status: TransactionStatus
-    timestamp: datetime
-
-
-class TransactionDetail(BaseModel):
-    transaction_id: str
-    status: TransactionStatus
-    recipient_phone: str
-    amount: float
-    timestamp: datetime
-    error_message: str | None = None
+# Include routers
+app.include_router(transactions.router)
 
 
 @app.get("/health")
-async def health():
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "mock-transaction-api",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+    }
 
 
-@app.post("/api/v1/transactions/validate")
-async def validate(req: ValidateRequest) -> ValidateResponse:
-    # Simulate latency 100-500ms
-    await asyncio.sleep(random.uniform(0.1, 0.5))
-
-    # Random failure 10%
-    if random.random() < 0.1:
-        raise HTTPException(503, "Service temporarily unavailable")
-
-    # Simple validation
-    if req.amount > 5_000_000:
-        return ValidateResponse(is_valid=False, error="Amount exceeds limit")
-    if req.amount < 1000:
-        return ValidateResponse(is_valid=False, error="Amount too low")
-
-    return ValidateResponse(is_valid=True)
-
-
-@app.post("/api/v1/transactions/execute", status_code=201)
-async def execute(req: ExecuteRequest) -> ExecuteResponse:
-    # Simulate latency
-    await asyncio.sleep(random.uniform(0.1, 0.5))
-
-    # Random failure 10%
-    if random.random() < 0.1:
-        raise HTTPException(503, "Service temporarily unavailable")
-
-    # Generate transaction
-    tx_id = f"TXN-{uuid.uuid4().hex[:12].upper()}"
-    rand = random.random()
-    status = (
-        TransactionStatus.COMPLETED
-        if rand < 0.7
-        else TransactionStatus.PENDING
-        if rand < 0.9
-        else TransactionStatus.FAILED
-    )
-    timestamp = datetime.utcnow()
-
-    # Store
-    transactions[tx_id] = TransactionDetail(
-        transaction_id=tx_id,
-        status=status,
-        recipient_phone=req.recipient_phone,
-        amount=req.amount,
-        timestamp=timestamp,
-        error_message="Payment declined" if status == TransactionStatus.FAILED else None,
-    )
-
-    return ExecuteResponse(transaction_id=tx_id, status=status, timestamp=timestamp)
-
-
-@app.get("/api/v1/transactions/{transaction_id}")
-async def get_status(transaction_id: str) -> TransactionDetail:
-    # Simulate latency
-    await asyncio.sleep(random.uniform(0.1, 0.5))
-
-    # Random failure 10%
-    if random.random() < 0.1:
-        raise HTTPException(503, "Service temporarily unavailable")
-
-    if transaction_id not in transactions:
-        raise HTTPException(404, f"Transaction {transaction_id} not found")
-
-    return transactions[transaction_id]
+@app.get("/")
+async def root():
+    """Root endpoint with API information."""
+    return {
+        "service": "Mock Transaction API",
+        "version": "1.0.0",
+        "description": "Simulates external transaction processing service",
+        "endpoints": {
+            "health": "/health",
+            "docs": "/docs",
+            "validate": "POST /api/v1/transactions/validate",
+            "execute": "POST /api/v1/transactions/execute",
+            "status": "GET /api/v1/transactions/{transaction_id}",
+        },
+        "features": [
+            "Realistic latency simulation (100-500ms)",
+            "Random failures (10% probability)",
+            "State transitions: pending -> completed/failed",
+            "Validation before execution",
+        ],
+    }
