@@ -946,7 +946,7 @@ def estimate_conversation_cost(messages: list) -> dict:
 #### B.2 Dashboard de Métricas
 
 ```python
-# src/api/routes/monitoring.py
+# apps/api/routes/monitoring.py
 
 @app.get("/monitoring/prompts")
 async def get_prompt_metrics():

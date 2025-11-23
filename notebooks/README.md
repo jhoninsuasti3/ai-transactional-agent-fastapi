@@ -49,7 +49,7 @@ jupyter notebook notebooks/
 ```python
 # Imports al inicio
 import sys
-sys.path.append('..')  # Para importar desde src/
+sys.path.append('..')  # Para importar desde apps/
 
 from src.agents.transactional.agent import create_transactional_agent
 from src.config.settings import settings
