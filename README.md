@@ -4,6 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
+[![LangChain](https://img.shields.io/badge/LangChain-0.3+-green.svg)](https://python.langchain.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.27-purple.svg)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
@@ -42,7 +43,8 @@ Agente:  "Transacción completada exitosamente. El ID de tu transacción es: TXN
 |------------|-----------|---------|-----------|
 | **Lenguaje** | Python | 3.12+ | Type hints, performance |
 | **Framework Web** | FastAPI | 0.115+ | ASGI, async, OpenAPI |
-| **Agente** | LangGraph | 0.2.27 | State machines, checkpointing |
+| **Motor de Agentes** | LangChain | 0.3+ | Framework base para agentes AI |
+| **Orquestación** | LangGraph | 0.2.27 | State machines, checkpointing, flujos |
 | **LLM** | OpenAI | gpt-4o-mini | Function calling, económico |
 | **Base de Datos** | PostgreSQL | 16 | ACID, relacional |
 | **ORM** | SQLAlchemy | 2.0+ | Async, type-safe |
