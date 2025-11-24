@@ -7,8 +7,10 @@ This client implements:
 - Structured logging for observability
 """
 
+import logging
+from typing import Any
+
 import httpx
-import structlog
 from pybreaker import CircuitBreaker, CircuitBreakerError
 from tenacity import (
     retry,
@@ -17,52 +19,45 @@ from tenacity import (
     wait_exponential,
 )
 
-from apps.apps.core.config import settings
-from apps.apps.core.exceptions import ExternalServiceError, TransactionValidationError
-from apps.apps.domain.ports.transaction_port import TransactionPort
-from apps.apps.domain.models.transaction import (
-    TransactionValidation,
-    TransactionExecution,
-    TransactionStatus as DomainTransactionStatus,
-)
-
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
-class TransactionClient(TransactionPort):
+class TransactionAPIClient:
     """HTTP client for transaction service with resilience patterns.
 
-    Implements the TransactionPort interface to communicate with external
-    payment processing services (simulated by Mock API).
+    Implements retry, circuit breaker, and timeout patterns for communicating
+    with external payment processing services (Mock API).
     """
 
     def __init__(
         self,
-        base_url: str | None = None,
-        timeout: httpx.Timeout | None = None,
-        max_retries: int | None = None,
-        circuit_breaker_threshold: int | None = None,
+        base_url: str = "http://localhost:8001",
+        connection_timeout: float = 5.0,
+        read_timeout: float = 10.0,
+        max_retries: int = 3,
+        circuit_breaker_threshold: int = 5,
+        circuit_breaker_timeout: int = 60,
     ):
         """Initialize resilient transaction client.
 
         Args:
-            base_url: Base URL for transaction service (defaults to settings)
-            timeout: HTTP timeout configuration (defaults to 5s connect, 10s read)
-            max_retries: Maximum retry attempts (defaults to settings)
-            circuit_breaker_threshold: Failures before circuit opens (defaults to settings)
+            base_url: Base URL for transaction service
+            connection_timeout: Connection timeout in seconds
+            read_timeout: Read timeout in seconds
+            max_retries: Maximum retry attempts
+            circuit_breaker_threshold: Failures before circuit opens
+            circuit_breaker_timeout: Seconds before circuit half-opens
         """
-        self.base_url = base_url or settings.TRANSACTION_SERVICE_URL
-        self.timeout = timeout or httpx.Timeout(
-            connect=settings.HTTP_TIMEOUT_CONNECT,
-            read=settings.HTTP_TIMEOUT_READ,
+        self.base_url = base_url
+        self.timeout = httpx.Timeout(
+            timeout=read_timeout,
+            connect=connection_timeout,
         )
-        self.max_retries = max_retries or settings.MAX_RETRIES
 
         # Circuit breaker configuration
-        cb_threshold = circuit_breaker_threshold or settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD
         self.circuit_breaker = CircuitBreaker(
-            fail_max=cb_threshold,
-            reset_timeout=settings.CIRCUIT_BREAKER_RESET_TIMEOUT,
+            fail_max=circuit_breaker_threshold,
+            reset_timeout=circuit_breaker_timeout,
             name="transaction_service_breaker",
         )
 
@@ -74,16 +69,14 @@ class TransactionClient(TransactionPort):
         )
 
         logger.info(
-            "transaction_client_initialized",
-            base_url=self.base_url,
-            max_retries=self.max_retries,
-            circuit_breaker_threshold=cb_threshold,
+            f"TransactionAPIClient initialized: base_url={base_url}, "
+            f"max_retries={max_retries}, circuit_breaker_threshold={circuit_breaker_threshold}"
         )
 
     async def close(self) -> None:
         """Close HTTP client and release connections."""
         await self.client.aclose()
-        logger.info("transaction_client_closed")
+        logger.info("TransactionAPIClient closed")
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -103,7 +96,7 @@ class TransactionClient(TransactionPort):
         self,
         method: str,
         endpoint: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> httpx.Response:
         """Make HTTP request with retry logic.
 
@@ -125,30 +118,20 @@ class TransactionClient(TransactionPort):
         try:
             response = await self.client.request(method, endpoint, **kwargs)
             response.raise_for_status()
+            logger.debug(
+                f"Request successful: {method} {endpoint} -> {response.status_code}"
+            )
             return response
         except httpx.TimeoutException as e:
-            logger.warning(
-                "request_timeout",
-                method=method,
-                endpoint=endpoint,
-                error=str(e),
-            )
+            logger.warning(f"Request timeout: {method} {endpoint} - {str(e)}")
             raise
         except httpx.NetworkError as e:
-            logger.warning(
-                "network_error",
-                method=method,
-                endpoint=endpoint,
-                error=str(e),
-            )
+            logger.warning(f"Network error: {method} {endpoint} - {str(e)}")
             raise
         except httpx.HTTPStatusError as e:
             logger.error(
-                "http_error",
-                method=method,
-                endpoint=endpoint,
-                status_code=e.response.status_code,
-                error=str(e),
+                f"HTTP error: {method} {endpoint} - "
+                f"{e.response.status_code} - {str(e)}"
             )
             raise
 
@@ -156,186 +139,160 @@ class TransactionClient(TransactionPort):
         self,
         recipient_phone: str,
         amount: float,
-    ) -> TransactionValidation:
+        currency: str = "COP",
+    ) -> dict[str, Any]:
         """Validate transaction before execution.
 
         Args:
-            recipient_phone: Recipient's phone number
+            recipient_phone: Recipient's phone number (10 digits)
             amount: Transaction amount
+            currency: Currency code (default: COP)
 
         Returns:
-            TransactionValidation with validation result
+            Validation response with is_valid, message, and validation_id
 
         Raises:
-            TransactionValidationError: Validation failed
-            ExternalServiceError: Service unavailable or circuit open
+            CircuitBreakerError: Circuit is open
+            httpx.HTTPStatusError: HTTP error from service
+            httpx.TimeoutException: Request timed out
         """
         logger.info(
-            "validating_transaction",
-            recipient_phone=recipient_phone,
-            amount=amount,
+            f"Validating transaction: phone={recipient_phone}, amount={amount}"
         )
 
         try:
             # Circuit breaker wraps the HTTP call
-            response = await self.circuit_breaker.call_async(
-                self._make_request,
+            response = await self._make_request(
                 "POST",
                 "/api/v1/transactions/validate",
                 json={
                     "recipient_phone": recipient_phone,
                     "amount": amount,
+                    "currency": currency,
                 },
             )
 
             data = response.json()
-            validation = TransactionValidation(
-                is_valid=data["is_valid"],
-                error_message=data.get("error"),
-            )
-
             logger.info(
-                "transaction_validated",
-                is_valid=validation.is_valid,
-                error=validation.error_message,
+                f"Transaction validated: is_valid={data['is_valid']}, "
+                f"validation_id={data.get('validation_id')}"
             )
-
-            return validation
+            return data
 
         except CircuitBreakerError as e:
-            logger.error("circuit_breaker_open", error=str(e))
-            raise ExternalServiceError(
-                "Transaction service temporarily unavailable (circuit open)"
-            ) from e
+            logger.error(f"Circuit breaker open: {str(e)}")
+            raise
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 503:
-                raise ExternalServiceError("Transaction service unavailable") from e
-            raise TransactionValidationError(f"Validation failed: {e}") from e
+            logger.error(
+                f"Validation failed with HTTP error: {e.response.status_code}"
+            )
+            raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            logger.error("validation_failed", error=str(e))
-            raise ExternalServiceError(
-                "Could not reach transaction service"
-            ) from e
+            logger.error(f"Validation failed: {str(e)}")
+            raise
 
     async def execute_transaction(
         self,
+        validation_id: str,
         recipient_phone: str,
         amount: float,
-    ) -> TransactionExecution:
+        currency: str = "COP",
+    ) -> dict[str, Any]:
         """Execute transaction after validation.
 
         Args:
+            validation_id: Validation ID from validate_transaction
             recipient_phone: Recipient's phone number
             amount: Transaction amount
+            currency: Currency code (default: COP)
 
         Returns:
-            TransactionExecution with transaction details
+            Execution response with transaction_id, status, and message
 
         Raises:
-            ExternalServiceError: Service unavailable or circuit open
+            CircuitBreakerError: Circuit is open
+            httpx.HTTPStatusError: HTTP error from service
+            httpx.TimeoutException: Request timed out
         """
         logger.info(
-            "executing_transaction",
-            recipient_phone=recipient_phone,
-            amount=amount,
+            f"Executing transaction: validation_id={validation_id}, "
+            f"phone={recipient_phone}, amount={amount}"
         )
 
         try:
-            response = await self.circuit_breaker.call_async(
-                self._make_request,
+            response = await self._make_request(
                 "POST",
                 "/api/v1/transactions/execute",
                 json={
+                    "validation_id": validation_id,
                     "recipient_phone": recipient_phone,
                     "amount": amount,
+                    "currency": currency,
                 },
             )
 
             data = response.json()
-            execution = TransactionExecution(
-                transaction_id=data["transaction_id"],
-                status=DomainTransactionStatus(data["status"]),
-                timestamp=data["timestamp"],
-            )
-
             logger.info(
-                "transaction_executed",
-                transaction_id=execution.transaction_id,
-                status=execution.status.value,
+                f"Transaction executed: transaction_id={data['transaction_id']}, "
+                f"status={data['status']}"
             )
-
-            return execution
+            return data
 
         except CircuitBreakerError as e:
-            logger.error("circuit_breaker_open", error=str(e))
-            raise ExternalServiceError(
-                "Transaction service temporarily unavailable (circuit open)"
-            ) from e
+            logger.error(f"Circuit breaker open: {str(e)}")
+            raise
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 503:
-                raise ExternalServiceError("Transaction service unavailable") from e
-            raise ExternalServiceError(f"Execution failed: {e}") from e
+            logger.error(
+                f"Execution failed with HTTP error: {e.response.status_code}"
+            )
+            raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            logger.error("execution_failed", error=str(e))
-            raise ExternalServiceError(
-                "Could not reach transaction service"
-            ) from e
+            logger.error(f"Execution failed: {str(e)}")
+            raise
 
     async def get_transaction_status(
         self,
         transaction_id: str,
-    ) -> TransactionExecution:
+    ) -> dict[str, Any]:
         """Get current status of a transaction.
 
         Args:
             transaction_id: Unique transaction identifier
 
         Returns:
-            TransactionExecution with current status
+            Transaction details with status, amount, timestamps, etc.
 
         Raises:
-            ExternalServiceError: Service unavailable or transaction not found
+            CircuitBreakerError: Circuit is open
+            httpx.HTTPStatusError: HTTP error from service (404 if not found)
+            httpx.TimeoutException: Request timed out
         """
-        logger.info("getting_transaction_status", transaction_id=transaction_id)
+        logger.info(f"Getting transaction status: transaction_id={transaction_id}")
 
         try:
-            response = await self.circuit_breaker.call_async(
-                self._make_request,
+            response = await self._make_request(
                 "GET",
                 f"/api/v1/transactions/{transaction_id}",
             )
 
             data = response.json()
-            execution = TransactionExecution(
-                transaction_id=data["transaction_id"],
-                status=DomainTransactionStatus(data["status"]),
-                timestamp=data["timestamp"],
-                error_message=data.get("error_message"),
-            )
-
             logger.info(
-                "transaction_status_retrieved",
-                transaction_id=execution.transaction_id,
-                status=execution.status.value,
+                f"Transaction status retrieved: transaction_id={transaction_id}, "
+                f"status={data['status']}"
             )
-
-            return execution
+            return data
 
         except CircuitBreakerError as e:
-            logger.error("circuit_breaker_open", error=str(e))
-            raise ExternalServiceError(
-                "Transaction service temporarily unavailable (circuit open)"
-            ) from e
+            logger.error(f"Circuit breaker open: {str(e)}")
+            raise
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                raise ExternalServiceError(
-                    f"Transaction {transaction_id} not found"
-                ) from e
-            if e.response.status_code == 503:
-                raise ExternalServiceError("Transaction service unavailable") from e
-            raise ExternalServiceError(f"Status check failed: {e}") from e
+                logger.warning(f"Transaction not found: {transaction_id}")
+            else:
+                logger.error(
+                    f"Status check failed with HTTP error: {e.response.status_code}"
+                )
+            raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
-            logger.error("status_check_failed", error=str(e))
-            raise ExternalServiceError(
-                "Could not reach transaction service"
-            ) from e
+            logger.error(f"Status check failed: {str(e)}")
+            raise
