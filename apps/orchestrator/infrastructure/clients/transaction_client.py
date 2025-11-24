@@ -31,7 +31,7 @@ class TransactionAPIClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8001",
+        base_url: str,
         connection_timeout: float = 5.0,
         read_timeout: float = 10.0,
         max_retries: int = 3,

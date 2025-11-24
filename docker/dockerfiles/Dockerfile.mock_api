@@ -1,0 +1,59 @@
+# =============================================================================
+# Lightweight Dockerfile for Mock Transaction API
+# Simulates external transaction service for testing
+# =============================================================================
+
+FROM python:3.12-slim AS base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_SYSTEM_PYTHON=1
+
+WORKDIR /app
+
+# Install system dependencies (minimal)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# =============================================================================
+# Dependencies Stage
+# =============================================================================
+FROM base AS dependencies
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+RUN uv sync --frozen --no-dev
+
+# =============================================================================
+# Production Stage
+# =============================================================================
+FROM base AS production
+
+# Copy dependencies
+COPY --from=dependencies /app/.venv /app/.venv
+
+# Copy mock API code only
+COPY mock_api/ /app/mock_api/
+
+# Create non-root user
+RUN useradd -m -u 1000 mockuser && \
+    chown -R mockuser:mockuser /app
+USER mockuser
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Start mock API
+CMD ["uv", "run", "uvicorn", "mock_api.main:app", "--host", "0.0.0.0", "--port", "8001"]

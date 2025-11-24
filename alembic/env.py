@@ -31,9 +31,9 @@ if database_url:
 
 # add your model's MetaData object here for 'autogenerate' support
 # Import all models to ensure they are registered with SQLAlchemy
-# from apps.infrastructure.persistence.models import Base
-# target_metadata = Base.metadata
-target_metadata = None
+from apps.orchestrator.infrastructure.persistence.models import Base
+
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -87,8 +87,11 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

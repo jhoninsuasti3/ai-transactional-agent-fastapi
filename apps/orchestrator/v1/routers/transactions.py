@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
+from apps.orchestrator.core.config import settings
 from apps.orchestrator.infrastructure.clients.transaction_client import (
     TransactionAPIClient,
 )
@@ -9,8 +10,15 @@ from apps.orchestrator.v1.schemas import TransactionResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
-# Initialize transaction client (will be dependency injected later)
-transaction_client = TransactionAPIClient()
+# Initialize transaction client with settings
+transaction_client = TransactionAPIClient(
+    base_url=settings.TRANSACTION_SERVICE_URL,
+    connection_timeout=settings.HTTP_TIMEOUT_CONNECT,
+    read_timeout=settings.HTTP_TIMEOUT_READ,
+    max_retries=settings.MAX_RETRIES,
+    circuit_breaker_threshold=settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    circuit_breaker_timeout=settings.CIRCUIT_BREAKER_RESET_TIMEOUT,
+)
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)

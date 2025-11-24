@@ -29,7 +29,7 @@ services:
   mock-api:
     build:
       context: .
-      dockerfile: docker/Dockerfile.mock
+      dockerfile: docker/dockerfiles/Dockerfile.mock_api
     container_name: transactional-mock-api
     restart: unless-stopped
     environment:
@@ -39,63 +39,31 @@ services:
       - "8001:8001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 10s
     networks:
       - agent-network
 
-  # Main Agent API
-  api:
+  # Orchestrator (Main FastAPI Service)
+  orchestrator:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    container_name: transactional-agent-api
+      dockerfile: docker/dockerfiles/Dockerfile.orchestrator
+    container_name: transactional-agent-orchestrator
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      # Application
-      - ENV=${ENV:-development}
-      - DEBUG=${DEBUG:-true}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-
-      # Database
+      # Override database connection for Docker
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-transactional_agent}
-
-      # OpenAI
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-mini}
-      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0}
-      - OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS:-1000}
-
-      # Mock API
-      - MOCK_API_URL=http://mock-api:8001
-      - MOCK_API_TIMEOUT_CONNECT=${MOCK_API_TIMEOUT_CONNECT:-5}
-      - MOCK_API_TIMEOUT_READ=${MOCK_API_TIMEOUT_READ:-10}
-
-      # Resilience
-      - MAX_RETRIES=${MAX_RETRIES:-3}
-      - RETRY_BACKOFF_MULTIPLIER=${RETRY_BACKOFF_MULTIPLIER:-1}
-      - RETRY_MIN_WAIT=${RETRY_MIN_WAIT:-1}
-      - RETRY_MAX_WAIT=${RETRY_MAX_WAIT:-4}
-      - CIRCUIT_BREAKER_FAILURE_THRESHOLD=${CIRCUIT_BREAKER_FAILURE_THRESHOLD:-5}
-      - CIRCUIT_BREAKER_TIMEOUT=${CIRCUIT_BREAKER_TIMEOUT:-60}
-      - CIRCUIT_BREAKER_RESET_TIMEOUT=${CIRCUIT_BREAKER_RESET_TIMEOUT:-30}
-
-      # API
-      - API_HOST=${API_HOST:-0.0.0.0}
-      - API_PORT=${API_PORT:-8000}
-      - API_WORKERS=${API_WORKERS:-1}
-      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:8000"]}
-
-      # Agent
-      - MAX_MESSAGES_IN_HISTORY=${MAX_MESSAGES_IN_HISTORY:-10}
-      - SUMMARIZE_AFTER_MESSAGES=${SUMMARIZE_AFTER_MESSAGES:-20}
-      - TOKEN_WARNING_THRESHOLD=${TOKEN_WARNING_THRESHOLD:-50000}
-      - TOKEN_CRITICAL_THRESHOLD=${TOKEN_CRITICAL_THRESHOLD:-75000}
-      - TOKEN_EMERGENCY_THRESHOLD=${TOKEN_EMERGENCY_THRESHOLD:-90000}
+      - LANGGRAPH_CHECKPOINT_DB=postgresql+psycopg://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+      - TRANSACTION_SERVICE_URL=http://mock-api:8001
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,15 +71,37 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - agent-network
     volumes:
       - ./apps:/app/apps:ro
       - ./alembic:/app/alembic:ro
+
+  # Agents Service (LangGraph - Future Implementation)
+  agents:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/Dockerfile.agents
+    container_name: transactional-agent-agents
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+      - LANGGRAPH_CHECKPOINT_DB=postgresql+psycopg://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent-network
+    volumes:
+      - ./apps:/app/apps:ro
 
 networks:
   agent-network:

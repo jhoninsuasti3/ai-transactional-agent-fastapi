@@ -1,14 +1,16 @@
 # =============================================================================
-# Multi-stage Dockerfile for AI Transactional Agent API
+# Dockerfile for LangGraph Agents Service
+# Handles conversational AI with LangGraph + LangChain
 # =============================================================================
-# Stage 1: Base with Python 3.12
+
 FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_SYSTEM_PYTHON=1
+
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,47 +21,44 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # =============================================================================
-# Stage 2: Dependencies
+# Dependencies Stage
+# =============================================================================
 FROM base AS dependencies
 
-WORKDIR /app
-
 # Copy dependency files
-COPY pyproject.toml ./
-COPY .python-version ./
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies
+# Install all dependencies including LangGraph/LangChain
 RUN uv sync --frozen --no-dev
 
 # =============================================================================
-# Stage 3: Production
+# Production Stage
+# =============================================================================
 FROM base AS production
 
-WORKDIR /app
-
-# Copy virtual environment from dependencies stage
+# Copy dependencies
 COPY --from=dependencies /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application code
 COPY apps/ /app/apps/
 COPY alembic/ /app/alembic/
-COPY alembic.ini /app/
+COPY alembic.ini /app/alembic.ini
 
 # Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
+RUN useradd -m -u 1000 agentuser && \
+    chown -R agentuser:agentuser /app
+USER agentuser
 
-# Expose port
-EXPOSE 8000
+# Expose port (if agents expose HTTP endpoint in future)
+EXPOSE 8002
 
-# Health check
+# Health check (placeholder for future implementation)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD echo "Agent service healthy" || exit 1
 
-# Run migrations and start application
-CMD ["sh", "-c", "alembic upgrade head && uvicorn apps.main:app --host 0.0.0.0 --port 8000"]
+# Start agents service
+# For now, this is a placeholder - will be updated when LangGraph agent is implemented
+CMD ["sh", "-c", "echo 'Agents service ready. Waiting for LangGraph implementation.' && tail -f /dev/null"]
