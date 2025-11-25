@@ -20,6 +20,7 @@ dependencies = [
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
+    "langchain-anthropic>=0.3.0",
     "langgraph>=0.2.27",
     "langgraph-checkpoint-postgres>=2.0.0",
 
@@ -58,19 +59,17 @@ dev = [
     "pytest-timeout>=2.3.0",
     "pytest-httpx>=0.35.0",
     "faker>=30.0.0",
-
     # Linting & Formatting
     "ruff>=0.6.0",
     "mypy>=1.11.0",
-
     # Type Stubs
     "types-requests>=2.31.0",
-
     # Security
     "bandit>=1.7.0",
-
     # Pre-commit
     "pre-commit>=3.8.0",
+    "langgraph-cli[inmem]>=0.4.7",
+    "grandalf>=0.8",
 ]
 
 [build-system]

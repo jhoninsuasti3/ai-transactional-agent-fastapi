@@ -51,16 +51,20 @@ class Settings:
     DATABASE_POOL_SIZE: int = int(os.getenv("DATABASE_POOL_SIZE", "10"))
     DATABASE_MAX_OVERFLOW: int = int(os.getenv("DATABASE_MAX_OVERFLOW", "20"))
 
-    # LangChain/OpenAI
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    # LangChain/LangSmith
     LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
     LANGCHAIN_TRACING_V2: bool = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     LANGCHAIN_PROJECT: str = os.getenv("LANGCHAIN_PROJECT", "transactional-agent")
 
+    # LLM Providers
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+
     # LLM Configuration
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
-    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.0"))
-    LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "1000"))
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "anthropic")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "anthropic:claude-3-5-haiku-20241022")
+    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
+    LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "500"))
 
     # External Services
     TRANSACTION_SERVICE_URL: str = os.getenv("TRANSACTION_SERVICE_URL", "http://localhost:8000")
