@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     API_WORKERS: int = Field(default=1, description="Number of workers")
 
     # CORS
-    CORS_ORIGINS: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
-        description="Allowed CORS origins",
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
+        description="Allowed CORS origins (comma-separated)",
     )
     CORS_ALLOW_CREDENTIALS: bool = Field(
         default=True,
@@ -170,11 +170,14 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
-        """Parse CORS origins from string or list."""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+    def parse_cors_origins(cls, v: str) -> str:
+        """Validate CORS origins string."""
         return v
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Get CORS origins as a list."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     @property
     def database_url_str(self) -> str:

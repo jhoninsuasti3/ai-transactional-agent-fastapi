@@ -42,11 +42,11 @@ USER appuser
 ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # Run migrations and start application
-CMD ["sh", "-c", "/root/.local/bin/uv run alembic upgrade head && /root/.local/bin/uv run uvicorn apps.orchestrator.api.app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "cd /app && .venv/bin/alembic upgrade head && .venv/bin/uvicorn apps.orchestrator.api.app:app --host 0.0.0.0 --port 8001"]
