@@ -15,7 +15,6 @@ dependencies = [
     "uvicorn[standard]>=0.31.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",
-
     # LangChain/LangGraph (versiones modernas 2025)
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
@@ -23,30 +22,25 @@ dependencies = [
     "langchain-anthropic>=0.3.0",
     "langgraph>=0.2.27",
     "langgraph-checkpoint-postgres>=2.0.0",
-
     # Database
     "sqlalchemy[asyncio]>=2.0.35",
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
     "psycopg2-binary>=2.9.9",
-
     # HTTP Client
     "httpx>=0.27.0",
-
     # Resiliencia
     "tenacity>=9.0.0",
     "pybreaker>=1.2.0",
-
     # Logging
     "structlog>=24.4.0",
     "python-json-logger>=2.0.7",
-
     # Validación
     "phonenumbers>=8.13.0",
-
     # Utilities
     "python-dotenv>=1.0.0",
     "tiktoken>=0.7.0",
+    "psycopg>=3.2.13",
 ]
 
 [dependency-groups]

@@ -14,6 +14,7 @@ from apps.agents.transactional.graph import get_agent
 from apps.agents.transactional.state import TransactionalState
 from apps.orchestrator.settings import settings
 from apps.orchestrator.constants import LANGGRAPH_RECURSION_LIMIT
+from apps.orchestrator.services.persistence_service import persistence_service
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -106,6 +107,59 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Remove None values from metadata
         metadata = {k: v for k, v in metadata.items() if v is not None}
+
+        # === PERSIST TO DATABASE ===
+        try:
+            # 1. Get or create conversation
+            conv_uuid = persistence_service.get_or_create_conversation(
+                conversation_id=conversation_id,
+                user_id=request.user_id,
+            )
+
+            # 2. Save user message
+            persistence_service.save_message(
+                conversation_id=conv_uuid,
+                role="user",
+                content=request.message,
+            )
+
+            # 3. Save assistant response
+            persistence_service.save_message(
+                conversation_id=conv_uuid,
+                role="assistant",
+                content=response_text,
+                metadata=metadata,
+            )
+
+            # 4. Save transaction if completed
+            if result.get("transaction_id") and result.get("transaction_status") == "completed":
+                persistence_service.save_transaction(
+                    conversation_id=conv_uuid,
+                    user_id=request.user_id,
+                    external_transaction_id=result["transaction_id"],
+                    recipient_phone=result.get("phone", ""),
+                    amount=float(result.get("amount", 0)),
+                    status="completed",
+                )
+
+                # Mark conversation as completed
+                from datetime import datetime
+                persistence_service.update_conversation_status(
+                    conversation_id=conv_uuid,
+                    status="completed",
+                    ended_at=datetime.utcnow(),
+                )
+
+            logger.info("data_persisted_to_database", conversation_uuid=str(conv_uuid))
+
+        except Exception as persist_error:
+            # Log but don't fail the request if persistence fails
+            logger.error(
+                "persistence_error",
+                error=str(persist_error),
+                conversation_id=conversation_id,
+                exc_info=True,
+            )
 
         logger.info(
             "chat_response_generated",
