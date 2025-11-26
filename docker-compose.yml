@@ -80,7 +80,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-transactional_agent}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
-      - LANGGRAPH_CHECKPOINT_DB=postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+      - LANGGRAPH_CHECKPOINT_DB=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
       # Services
       - TRANSACTION_SERVICE_URL=http://mock-api:8001
       - REDIS_URI=redis://redis:6379

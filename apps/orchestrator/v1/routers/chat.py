@@ -46,26 +46,32 @@ async def chat(request: ChatRequest) -> ChatResponse:
     )
 
     try:
-        # TEMPORARILY DISABLED: PostgreSQL checkpointing
-        # TODO: Fix PostgreSQL connection issues
-        # Get agent without checkpointer for now
-        agent = get_agent(checkpointer=None)
+        # Create checkpointer context manager
+        checkpointer_cm = _create_checkpointer()
 
-        # Prepare input with only the new message
-        input_data = {
-            "messages": [HumanMessage(content=request.message)],
-        }
+        # Use the checkpointer within a context
+        with checkpointer_cm as checkpointer:
+            # Setup tables if needed (first time only)
+            checkpointer.setup()
 
-        # Run agent with config
-        config = {
-            "configurable": {
-                "thread_id": conversation_id,
-            },
-            "recursion_limit": LANGGRAPH_RECURSION_LIMIT,
-        }
+            # Get agent compiled with checkpointer
+            agent = get_agent(checkpointer=checkpointer)
 
-        # Invoke agent (without checkpointer, state won't persist)
-        result = agent.invoke(input_data, config=config)
+            # Prepare input with only the new message
+            input_data = {
+                "messages": [HumanMessage(content=request.message)],
+            }
+
+            # Run agent with checkpointing config
+            config = {
+                "configurable": {
+                    "thread_id": conversation_id,
+                },
+                "recursion_limit": LANGGRAPH_RECURSION_LIMIT,
+            }
+
+            # Invoke agent (it will load previous state from checkpointer)
+            result = agent.invoke(input_data, config=config)
 
         # Extract response from agent state (LangChain message objects)
         messages = result.get("messages", [])
