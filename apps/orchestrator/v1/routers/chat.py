@@ -1,65 +1,118 @@
 # -*- coding: utf-8 -*-
-"""Chat router for API v1 - Simple version without LangGraph agent."""
+"""Chat router for API v1 - Integrated with LangGraph agent."""
 
 import uuid
-from datetime import datetime
+from typing import Dict, Any
 
-from fastapi import APIRouter
+import structlog
+from fastapi import APIRouter, HTTPException
+from langgraph.checkpoint.postgres import PostgresSaver
+
 from apps.orchestrator.v1.schemas import ChatRequest, ChatResponse
+from apps.agents.transactional.graph import agent
+from apps.agents.transactional.state import TransactionalState
+from apps.orchestrator.settings import settings
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-# Simple in-memory conversation storage
-conversations = {}
+
+def _get_checkpointer() -> PostgresSaver:
+    """Create PostgreSQL checkpointer for conversation persistence."""
+    return PostgresSaver.from_conn_string(settings.LANGGRAPH_CHECKPOINT_DB)
 
 
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    """Chat endpoint - simple version without agent."""
+    """Chat endpoint with LangGraph agent integration.
+
+    Args:
+        request: Chat request with message and optional conversation_id
+
+    Returns:
+        ChatResponse with agent response and metadata
+    """
     conversation_id = request.conversation_id or f"conv-{uuid.uuid4()}"
 
-    if conversation_id not in conversations:
-        conversations[conversation_id] = []
-
-    conversations[conversation_id].append({
-        "role": "user",
-        "content": request.message,
-        "timestamp": datetime.utcnow().isoformat(),
-    })
-
-    message_lower = request.message.lower()
-
-    # Simple intent detection
-    if any(keyword in message_lower for keyword in ["hola", "buenos", "buenas", "hey"]):
-        response_text = "Hola! Soy tu asistente de transacciones. Puedo ayudarte a enviar dinero."
-        metadata = {"intent": "greeting", "step": "initial"}
-
-    elif any(keyword in message_lower for keyword in ["enviar", "transferir", "mandar"]):
-        response_text = "Por supuesto. A que numero de celular deseas enviar dinero?"
-        metadata = {"intent": "send_money", "step": "ask_phone"}
-
-    elif any(char.isdigit() for char in request.message) and len("".join(filter(str.isdigit, request.message))) == 10:
-        phone = "".join(filter(str.isdigit, request.message))
-        response_text = f"Perfecto. Que monto deseas enviar al numero {phone}?"
-        metadata = {"intent": "send_money", "step": "ask_amount", "phone": phone}
-
-    else:
-        response_text = "Entiendo. En que puedo ayudarte? Puedo asistirte con envios de dinero."
-        metadata = {"intent": "unknown", "step": "clarification"}
-
-    conversations[conversation_id].append({
-        "role": "assistant",
-        "content": response_text,
-        "timestamp": datetime.utcnow().isoformat(),
-    })
-
-    return ChatResponse(
-        response=response_text,
+    logger.info(
+        "chat_request_received",
         conversation_id=conversation_id,
-        transaction_id=None,
-        requires_confirmation=False,
-        metadata=metadata,
+        message=request.message,
     )
+
+    try:
+        # Prepare initial state
+        initial_state: TransactionalState = {
+            "messages": [{"role": "user", "content": request.message}],
+            "phone": None,
+            "amount": None,
+            "needs_confirmation": False,
+            "confirmed": False,
+            "transaction_id": None,
+            "transaction_status": None,
+            "error": None,
+        }
+
+        # Create checkpointer for conversation persistence
+        checkpointer = _get_checkpointer()
+
+        # Run agent with checkpointing
+        config = {
+            "configurable": {
+                "thread_id": conversation_id,
+            }
+        }
+
+        # Invoke agent
+        result = agent.invoke(
+            initial_state,
+            config=config,
+            checkpointer=checkpointer,
+        )
+
+        # Extract response from agent state
+        messages = result.get("messages", [])
+        last_message = messages[-1] if messages else None
+        response_text = last_message.get("content", "Lo siento, hubo un error.") if last_message else "Lo siento, hubo un error."
+
+        # Build metadata from agent state
+        metadata: Dict[str, Any] = {
+            "phone": result.get("phone"),
+            "amount": result.get("amount"),
+            "needs_confirmation": result.get("needs_confirmation", False),
+            "confirmed": result.get("confirmed", False),
+            "transaction_status": result.get("transaction_status"),
+        }
+
+        # Remove None values from metadata
+        metadata = {k: v for k, v in metadata.items() if v is not None}
+
+        logger.info(
+            "chat_response_generated",
+            conversation_id=conversation_id,
+            transaction_id=result.get("transaction_id"),
+            status=result.get("transaction_status"),
+        )
+
+        return ChatResponse(
+            response=response_text,
+            conversation_id=conversation_id,
+            transaction_id=result.get("transaction_id"),
+            requires_confirmation=result.get("needs_confirmation", False),
+            metadata=metadata,
+        )
+
+    except Exception as e:
+        logger.error(
+            "chat_error",
+            conversation_id=conversation_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing chat request: {str(e)}"
+        )
 
 
 @router.get("/health")
@@ -68,7 +121,7 @@ async def chat_health():
     return {
         "status": "healthy",
         "router": "chat",
-        "version": "v1-simple",
-        "agent_integrated": False,
-        "active_conversations": len(conversations),
+        "version": "v1-langgraph",
+        "agent_integrated": True,
+        "langgraph_agent": "transactional",
     }

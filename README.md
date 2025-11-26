@@ -229,11 +229,11 @@ nano .env  # o tu editor preferido
 docker-compose up --build
 
 # 5. Los servicios estarán disponibles en:
-# - API Principal:    http://localhost:8000
-# - API Docs:         http://localhost:8000/docs
-# - Mock API:         http://localhost:8001
-# - Mock API Docs:    http://localhost:8001/docs
-# - PostgreSQL:       localhost:5432
+# - Orchestrator API (with integrated LangGraph agent): http://localhost:8002
+# - Orchestrator Docs:    http://localhost:8002/docs
+# - Mock Transaction API: http://localhost:8001
+# - Mock API Docs:        http://localhost:8001/docs
+# - PostgreSQL:           localhost:5432
 ```
 
 ### Opción 2: Instalación Local (Desarrollo)
@@ -352,10 +352,10 @@ uv run python main.py
 
 ```bash
 # 1. Health check
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8002/api/v1/health
 
 # 2. Documentación interactiva
-# Abrir en navegador: http://localhost:8000/docs
+# Abrir en navegador: http://localhost:8002/docs
 
 # 3. Ejecutar tests
 uv run pytest
@@ -374,7 +374,7 @@ open htmlcov/index.html  # MacOS
 
 ```bash
 # POST /api/v1/chat
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8002/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Quiero enviar 50000 pesos al 3001234567",
@@ -394,12 +394,12 @@ curl -X POST http://localhost:8000/api/v1/chat \
 
 ```bash
 # 1. Inicio de conversación
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8002/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "Hola", "user_id": "user-123"}'
 
 # 2. Proporcionar número de teléfono
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8002/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Al 3001234567",
@@ -408,7 +408,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
   }'
 
 # 3. Proporcionar monto
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8002/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "50000 pesos",
@@ -417,7 +417,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
   }'
 
 # 4. Confirmar transacción
-curl -X POST http://localhost:8000/api/v1/chat \
+curl -X POST http://localhost:8002/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Sí, confirmo",
@@ -430,13 +430,13 @@ curl -X POST http://localhost:8000/api/v1/chat \
 
 ```bash
 # Health Check
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8002/api/v1/health
 
 # Consultar conversación
-curl http://localhost:8000/api/v1/conversations/{conversation_id}
+curl http://localhost:8002/api/v1/conversations/{conversation_id}
 
 # Consultar transacción
-curl http://localhost:8000/api/v1/transactions/{transaction_id}
+curl http://localhost:8002/api/v1/transactions/{transaction_id}
 ```
 
 ---

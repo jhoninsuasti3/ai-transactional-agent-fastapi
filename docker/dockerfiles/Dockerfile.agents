@@ -24,13 +24,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency files
 COPY pyproject.toml uv.lock README.md ./
 
-# Install all dependencies without installing the project itself
-RUN /root/.local/bin/uv sync --frozen --no-dev --no-install-project
+# Install all dependencies INCLUDING dev dependencies for langgraph-cli
+RUN /root/.local/bin/uv sync --frozen --no-install-project
 
 # Copy application code
 COPY apps/ /app/apps/
 COPY alembic/ /app/alembic/
 COPY alembic.ini /app/alembic.ini
+COPY langgraph.json /app/langgraph.json
 
 # Create non-root user
 RUN useradd -m -u 1000 agentuser && \
@@ -40,13 +41,13 @@ USER agentuser
 # Set PATH for agentuser
 ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
 
-# Expose port (if agents expose HTTP endpoint in future)
+# Expose LangGraph API port
 EXPOSE 8002
 
-# Health check (placeholder for future implementation)
+# Health check - verify LangGraph API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD echo "Agent service healthy" || exit 1
+    CMD curl -f http://localhost:8002/ok || exit 1
 
-# Start agents service
-# For now, this is a placeholder - will be updated when LangGraph agent is implemented
-CMD ["sh", "-c", "echo 'Agents service ready. Waiting for LangGraph implementation.' && tail -f /dev/null"]
+# Start LangGraph API server using uvicorn directly
+# This runs the LangGraph API without needing Docker-in-Docker
+CMD ["/app/.venv/bin/uvicorn", "langgraph_api.server:app", "--host", "0.0.0.0", "--port", "8002"]

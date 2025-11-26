@@ -5,7 +5,7 @@ This module determines the next node based on transaction validation.
 
 from typing import Literal
 
-from apps.agents.transactional.state.state import TransactionalState
+from apps.agents.transactional.state import TransactionalState
 
 
 def validation_route(state: TransactionalState) -> Literal["valid", "invalid"]:

@@ -5,7 +5,7 @@ This module determines the next node based on the extracted intent.
 
 from typing import Literal
 
-from apps.agents.transactional.state.state import TransactionalState
+from apps.agents.transactional.state import TransactionalState
 
 
 def intent_route(state: TransactionalState) -> Literal["conversation", "transaction"]:
