@@ -7,18 +7,23 @@ from typing import Dict, Any
 import structlog
 from fastapi import APIRouter, HTTPException
 from langgraph.checkpoint.postgres import PostgresSaver
+from langchain_core.messages import HumanMessage
 
 from apps.orchestrator.v1.schemas import ChatRequest, ChatResponse
-from apps.agents.transactional.graph import agent
+from apps.agents.transactional.graph import get_agent
 from apps.agents.transactional.state import TransactionalState
 from apps.orchestrator.settings import settings
+from apps.orchestrator.constants import LANGGRAPH_RECURSION_LIMIT
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-def _get_checkpointer() -> PostgresSaver:
-    """Create PostgreSQL checkpointer for conversation persistence."""
+def _create_checkpointer() -> PostgresSaver:
+    """Create PostgreSQL checkpointer for conversation persistence.
+
+    Returns the context manager - it will be used with .__ enter__() when compiling the graph.
+    """
     return PostgresSaver.from_conn_string(settings.LANGGRAPH_CHECKPOINT_DB)
 
 
@@ -41,39 +46,48 @@ async def chat(request: ChatRequest) -> ChatResponse:
     )
 
     try:
-        # Prepare initial state
-        initial_state: TransactionalState = {
-            "messages": [{"role": "user", "content": request.message}],
-            "phone": None,
-            "amount": None,
-            "needs_confirmation": False,
-            "confirmed": False,
-            "transaction_id": None,
-            "transaction_status": None,
-            "error": None,
+        # TEMPORARILY DISABLED: PostgreSQL checkpointing
+        # TODO: Fix PostgreSQL connection issues
+        # Get agent without checkpointer for now
+        agent = get_agent(checkpointer=None)
+
+        # Prepare input with only the new message
+        input_data = {
+            "messages": [HumanMessage(content=request.message)],
         }
 
-        # Create checkpointer for conversation persistence
-        checkpointer = _get_checkpointer()
-
-        # Run agent with checkpointing
+        # Run agent with config
         config = {
             "configurable": {
                 "thread_id": conversation_id,
-            }
+            },
+            "recursion_limit": LANGGRAPH_RECURSION_LIMIT,
         }
 
-        # Invoke agent
-        result = agent.invoke(
-            initial_state,
-            config=config,
-            checkpointer=checkpointer,
-        )
+        # Invoke agent (without checkpointer, state won't persist)
+        result = agent.invoke(input_data, config=config)
 
-        # Extract response from agent state
+        # Extract response from agent state (LangChain message objects)
         messages = result.get("messages", [])
         last_message = messages[-1] if messages else None
-        response_text = last_message.get("content", "Lo siento, hubo un error.") if last_message else "Lo siento, hubo un error."
+
+        # Extract text from message content (handle both string and list formats)
+        if last_message:
+            content = last_message.content
+            if isinstance(content, list):
+                # Extract text parts from content blocks
+                text_parts = [
+                    block.get("text", "") if isinstance(block, dict) else str(block)
+                    for block in content
+                    if isinstance(block, dict) and block.get("type") == "text"
+                ]
+                response_text = " ".join(text_parts) if text_parts else "Lo siento, hubo un error."
+            elif isinstance(content, str):
+                response_text = content
+            else:
+                response_text = str(content)
+        else:
+            response_text = "Lo siento, hubo un error."
 
         # Build metadata from agent state
         metadata: Dict[str, Any] = {

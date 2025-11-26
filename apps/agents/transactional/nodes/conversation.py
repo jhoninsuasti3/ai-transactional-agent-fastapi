@@ -6,16 +6,19 @@ from langchain_core.messages import AIMessage
 from apps.agents.transactional.config import get_llm
 from apps.agents.transactional.prompts.conversation import get_conversation_prompt
 from apps.agents.transactional.state import TransactionalState
-from apps.agents.transactional.tools import format_phone_number_tool
+from apps.agents.transactional.tools import ALL_TOOLS
 
 logger = structlog.get_logger(__name__)
 
 
 def conversation_node(state: TransactionalState) -> dict:
-    """Generate conversational response to collect phone and amount.
+    """Generate conversational response with access to all transaction tools.
 
-    Uses LLM with format_phone_number_tool to interact naturally with user
-    and collect/validate transaction details.
+    The LLM can use tools to:
+    - Format and validate phone numbers
+    - Validate transactions
+    - Execute transactions (if confirmed)
+    - Check transaction status
 
     Args:
         state: Current conversation state
@@ -27,12 +30,14 @@ def conversation_node(state: TransactionalState) -> dict:
         "conversation_node_start",
         phone=state.get("phone"),
         amount=state.get("amount"),
+        needs_confirmation=state.get("needs_confirmation"),
+        confirmed=state.get("confirmed"),
         message_count=len(state.get("messages", []))
     )
 
-    # Get LLM with tools
+    # Get LLM with ALL tools available
     llm = get_llm()
-    llm_with_tools = llm.bind_tools([format_phone_number_tool])
+    llm_with_tools = llm.bind_tools(ALL_TOOLS)
 
     # Build prompt with current state
     prompt = get_conversation_prompt(

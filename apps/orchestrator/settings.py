@@ -51,6 +51,14 @@ class Settings:
     DATABASE_POOL_SIZE: int = int(os.getenv("DATABASE_POOL_SIZE", "10"))
     DATABASE_MAX_OVERFLOW: int = int(os.getenv("DATABASE_MAX_OVERFLOW", "20"))
 
+    # LangGraph Checkpoint Database (psycopg format for LangGraph)
+    _langgraph_checkpoint_db = os.getenv("LANGGRAPH_CHECKPOINT_DB")
+    if _langgraph_checkpoint_db:
+        LANGGRAPH_CHECKPOINT_DB: str = _langgraph_checkpoint_db
+    else:
+        # Use standard PostgreSQL connection string format (not SQLAlchemy format)
+        LANGGRAPH_CHECKPOINT_DB: str = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+
     # LangChain/LangSmith
     LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
     LANGCHAIN_TRACING_V2: bool = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
