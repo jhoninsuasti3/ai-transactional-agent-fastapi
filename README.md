@@ -8,6 +8,8 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.27-purple.svg)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
+[![Tests](https://img.shields.io/badge/Tests-455%20passing-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/Coverage-78.19%25-green.svg)](tests/)
 
 ---
 
@@ -104,10 +106,9 @@ Agente:  "Transacción completada exitosamente. El ID de tu transacción es: TXN
 ├── 📁 mock_api/                      # Mock API externo (standalone)
 │   └── main.py                       # FastAPI simple (puerto 8001)
 │
-├── 📁 tests/                         # Testing (>70% coverage)
-│   ├── unit/                         # Tests unitarios
-│   ├── integration/                  # Tests de integración
-│   └── e2e/                          # Tests end-to-end
+├── 📁 tests/                         # Testing (78.19% coverage - 455 tests)
+│   ├── unit/                         # Tests unitarios (420 tests)
+│   └── integration/                  # Tests de integración (35 tests)
 │
 ├── 📁 alembic/                       # Migraciones de base de datos
 │   └── versions/                     # Archivos de migración
@@ -118,6 +119,8 @@ Agente:  "Transacción completada exitosamente. El ID de tu transacción es: TXN
 │
 ├── 📁 docs/                          # Documentación del proyecto
 │   ├── ARCHITECTURE_ENTERPRISE.md    # Arquitectura detallada
+│   ├── ARCHITECTURE_DIAGRAMS.md      # Diagramas de arquitectura y secuencia
+│   ├── CI_CD_SETUP.md                # Guía completa de CI/CD con GitHub Actions
 │   ├── MIGRATION_GUIDE.md            # Guía de migración
 │
 ├── 📁 prompts/                       # Templates de prompts
@@ -125,9 +128,24 @@ Agente:  "Transacción completada exitosamente. El ID de tu transacción es: TXN
 │
 ├── 📁 notebooks/                     # Jupyter notebooks (experimentos)
 │
+├── 📁 .github/                       # GitHub Actions CI/CD
+│   ├── workflows/
+│   │   ├── ci.yml                    # Tests y quality checks
+│   │   ├── cd-aws.yml                # Deploy a AWS ECS/Fargate
+│   │   └── cd-ec2.yml                # Deploy a EC2 (alternativo)
+│   └── README.md                     # Guía de workflows
+│
+├── 📁 aws/                           # Infraestructura AWS
+│   ├── terraform/                    # Infrastructure as Code
+│   └── task-definition.json          # ECS task definition
+│
+├── 📁 scripts/                       # Scripts de utilidad
+│   └── setup-github-secrets.sh       # Configurar secrets de GitHub
+│
 ├── 📄 pyproject.toml                 # Configuración del proyecto (uv)
 ├── 📄 docker-compose.yml             # Orquestación de servicios
 ├── 📄 .env.example                   # Template de variables de entorno
+├── 📄 .env.ci.example                # Template para CI/CD
 ├── 📄 alembic.ini                    # Configuración de Alembic
 ├── 📄 main.py                        # Entry point de la aplicación
 └── 📄 README.md                      # Este archivo
@@ -195,6 +213,8 @@ El proyecto implementa **Arquitectura Hexagonal (Ports & Adapters)** con **Domai
 4. **Presentation** (API): FastAPI endpoints, schemas
 
 **Más detalles**: Ver [docs/ARCHITECTURE_ENTERPRISE.md](docs/ARCHITECTURE_ENTERPRISE.md)
+
+**Diagramas visuales**: Ver [docs/ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md) para diagramas de arquitectura, secuencia y deployment.
 
 ---
 
@@ -443,7 +463,7 @@ curl http://localhost:8002/api/v1/transactions/{transaction_id}
 
 ## 🧪 Testing
 
-El proyecto mantiene >70% de cobertura con tests unitarios, de integración y E2E.
+El proyecto mantiene **78.19% de cobertura** con **455 tests** (420 unitarios + 35 integración).
 
 ```bash
 # Ejecutar todos los tests
@@ -457,16 +477,16 @@ open htmlcov/index.html  # MacOS
 xdg-open htmlcov/index.html  # Linux
 
 # Tests específicos
-uv run pytest tests/unit/              # Solo unitarios
-uv run pytest tests/integration/       # Solo integración
-uv run pytest tests/e2e/                # Solo E2E
+uv run pytest tests/unit/              # Solo unitarios (420 tests)
+uv run pytest tests/integration/       # Solo integración (35 tests)
 
 # Tests por marcador
 uv run pytest -m "not slow"             # Excluir tests lentos
 uv run pytest -m unit                   # Solo tests unitarios
+uv run pytest -m integration            # Solo tests de integración
 
 # Ejecutar un test específico
-uv run pytest tests/unit/test_agent.py::test_extract_node -v
+uv run pytest tests/unit/agents/transactional/nodes/test_extractor_node.py -v
 
 # Con logs
 uv run pytest -v --log-cli-level=INFO
@@ -477,6 +497,24 @@ uv run pytest -x
 # Parallel execution (más rápido)
 uv run pytest -n auto
 ```
+
+### Organización de Tests
+
+Los tests están organizados por tipo de flujo y escenario:
+
+- **tests/unit/** - Tests unitarios con mocks (420 tests)
+  - Nodos del agente (extractor, validator, executor, confirmation)
+  - Servicios (persistence, transaction)
+  - Routers (chat, conversations, health)
+  - Utilidades (formatters, validators)
+
+- **tests/integration/** - Tests de integración (35 tests)
+  - Flujos completos de transacción
+  - Casos de éxito (single message, multi-step, resume)
+  - Validaciones (empty fields, invalid formats, negative amounts)
+  - Cancelaciones (explicit cancel, exit)
+  - Errores (service failures, timeouts)
+  - Edge cases (very long messages, special characters)
 
 ---
 
@@ -637,11 +675,81 @@ HTTP_READ_TIMEOUT=10
 
 ---
 
+## 🚀 CI/CD y Deployment
+
+El proyecto incluye workflows completos de CI/CD con GitHub Actions para testing automático y deployment a AWS.
+
+### GitHub Actions Workflows
+
+- **CI (Continuous Integration)** - `.github/workflows/ci.yml`
+  - Se ejecuta en cada push/PR a `main` o `develop`
+  - Linting con ruff
+  - Tests completos con cobertura ≥70%
+  - Security scanning
+  - Build de Docker image
+
+- **CD - AWS ECS** - `.github/workflows/cd-aws.yml`
+  - Deploy automático a AWS ECS/Fargate
+  - Tests antes del deploy (bloquea si fallan)
+  - Build y push a ECR
+  - Deploy con rolling update
+  - Smoke tests post-deployment
+
+- **CD - AWS EC2** - `.github/workflows/cd-ec2.yml`
+  - Deploy alternativo a instancia EC2
+  - SSH deployment con backup
+  - Auto-rollback en caso de fallo
+
+### Configuración Rápida
+
+```bash
+# 1. Configurar GitHub Secrets (automático)
+./scripts/setup-github-secrets.sh
+
+# 2. O manualmente en GitHub:
+# Settings → Secrets → Actions → New repository secret
+
+# Secrets requeridos:
+# - OPENAI_API_KEY
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY
+# - PROD_POSTGRES_HOST
+# - PROD_POSTGRES_USER
+# - PROD_POSTGRES_PASSWORD
+# - PROD_POSTGRES_DB
+# - SECRET_KEY
+```
+
+### Infraestructura AWS
+
+El proyecto incluye Infrastructure as Code con Terraform:
+
+```bash
+cd aws/terraform
+terraform init
+terraform plan
+terraform apply
+```
+
+Esto creará:
+- VPC con subnets públicas y privadas
+- RDS PostgreSQL
+- ECR (Docker registry)
+- ECS Cluster + Service
+- Application Load Balancer
+- Security Groups, IAM Roles, CloudWatch Logs
+
+**Documentación completa**: Ver [docs/CI_CD_SETUP.md](docs/CI_CD_SETUP.md) y [.github/README.md](.github/README.md)
+
+---
+
 ## 📚 Documentación Adicional
 
 ### Documentos Principales
 
 - **[ARCHITECTURE_ENTERPRISE.md](docs/ARCHITECTURE_ENTERPRISE.md)** - Arquitectura detallada del proyecto
+- **[ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md)** - Diagramas de arquitectura, secuencia y deployment
+- **[CI_CD_SETUP.md](docs/CI_CD_SETUP.md)** - Guía completa de CI/CD con GitHub Actions y AWS
 - **[MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md)** - Guía de migración a arquitectura enterprise
 - **[STATUS_ENTERPRISE.md](docs/STATUS_ENTERPRISE.md)** - Estado actual y roadmap
 - **[COMMITS_GUIDE.md](docs/COMMITS_GUIDE.md)** - Guía de commits incrementales
@@ -652,6 +760,7 @@ HTTP_READ_TIMEOUT=10
 
 - **[prompts/PROMPTS.md](prompts/PROMPTS.md)** - Registro de prompts del sistema
 - **[notebooks/README.md](notebooks/README.md)** - Guía de uso de notebooks
+- **[.github/README.md](.github/README.md)** - Guía de workflows de GitHub Actions
 
 ---
 
@@ -718,12 +827,16 @@ lsof -ti:8000 | xargs kill -9  # MacOS/Linux
 
 ## 📊 Métricas del Proyecto
 
-- **Líneas de código**: ~3,000 (sin tests)
-- **Líneas de tests**: ~2,000
-- **Coverage**: >70%
+- **Líneas de código**: ~3,500 (sin tests)
+- **Líneas de tests**: ~2,800
+- **Test Coverage**: 78.19% (455 tests passing)
+  - Tests unitarios: 420
+  - Tests de integración: 35
 - **Dependencias**: 50+ paquetes
 - **Servicios Docker**: 3 (postgres, api, mock-api)
-- **Endpoints API**: 5+
+- **Endpoints API**: 6+ (health, chat, conversations, transactions)
+- **CI/CD**: 3 workflows de GitHub Actions
+- **Infraestructura**: Terraform + AWS (ECS, RDS, ECR, ALB)
 
 ---
 

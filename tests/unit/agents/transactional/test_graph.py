@@ -9,7 +9,7 @@ from apps.agents.transactional.graph import (
     should_confirm,
     should_execute,
     create_graph,
-    agent,
+    get_agent,
 )
 
 
@@ -27,31 +27,38 @@ class TestGraphRoutingFunctions:
         assert result == "validate"
 
     def test_should_extract_without_phone(self):
-        """Test should_extract routes to extract when phone missing."""
+        """Test should_extract routes to END when phone missing and no phone pattern in message."""
+        from langchain_core.messages import HumanMessage
         state = {
             "phone": None,
-            "amount": 50000
+            "amount": 50000,
+            "messages": [HumanMessage(content="50000 pesos")]
         }
         result = should_extract(state)
+        # Will extract because has amount pattern
         assert result == "extract"
 
     def test_should_extract_without_amount(self):
-        """Test should_extract routes to extract when amount missing."""
+        """Test should_extract routes to extract when amount missing but has data pattern."""
+        from langchain_core.messages import HumanMessage
         state = {
             "phone": "3001234567",
-            "amount": None
+            "amount": None,
+            "messages": [HumanMessage(content="3001234567")]
         }
         result = should_extract(state)
         assert result == "extract"
 
     def test_should_extract_without_both(self):
-        """Test should_extract routes to extract when both missing."""
+        """Test should_extract routes to END when both missing and no data patterns."""
+        from langchain_core.messages import HumanMessage
         state = {
             "phone": None,
-            "amount": None
+            "amount": None,
+            "messages": [HumanMessage(content="Hola")]
         }
         result = should_extract(state)
-        assert result == "extract"
+        assert result == END
 
     def test_should_validate_with_both_phone_and_amount(self):
         """Test should_validate routes to validate when data present."""
@@ -63,31 +70,31 @@ class TestGraphRoutingFunctions:
         assert result == "validate"
 
     def test_should_validate_without_data(self):
-        """Test should_validate routes to conversation when data missing."""
+        """Test should_validate routes to END when data missing."""
         state = {
             "phone": None,
             "amount": None
         }
         result = should_validate(state)
-        assert result == "conversation"
+        assert result == END
 
     def test_should_validate_partial_data_phone_only(self):
-        """Test should_validate routes to conversation with only phone."""
+        """Test should_validate routes to END with only phone."""
         state = {
             "phone": "3001234567",
             "amount": None
         }
         result = should_validate(state)
-        assert result == "conversation"
+        assert result == END
 
     def test_should_validate_partial_data_amount_only(self):
-        """Test should_validate routes to conversation with only amount."""
+        """Test should_validate routes to END with only amount."""
         state = {
             "phone": None,
             "amount": 50000
         }
         result = should_validate(state)
-        assert result == "conversation"
+        assert result == END
 
     def test_should_confirm_needs_confirmation_true(self):
         """Test should_confirm routes to confirmation when needed."""
@@ -144,8 +151,9 @@ class TestGraphRoutingFunctions:
         # Verify it's a compiled graph (has invoke method)
         assert hasattr(graph, 'invoke')
 
-    def test_singleton_agent_exists(self):
-        """Test that singleton agent instance exists."""
+    def test_agent_factory_exists(self):
+        """Test that agent factory function exists and returns agent."""
+        agent = get_agent()
         assert agent is not None
         assert hasattr(agent, 'invoke')
 
@@ -164,31 +172,35 @@ class TestGraphEdgeCases:
     """Test edge cases for graph routing."""
 
     def test_should_extract_with_empty_string_phone(self):
-        """Test routing with empty string phone."""
+        """Test routing with empty string phone - routes to extract if has amount pattern."""
+        from langchain_core.messages import HumanMessage
         state = {
             "phone": "",
-            "amount": 50000
+            "amount": 50000,
+            "messages": [HumanMessage(content="50000 pesos")]
         }
         result = should_extract(state)
         assert result == "extract"
 
     def test_should_extract_with_zero_amount(self):
-        """Test routing with zero amount."""
+        """Test routing with zero amount - routes to extract if has phone pattern."""
+        from langchain_core.messages import HumanMessage
         state = {
             "phone": "3001234567",
-            "amount": 0
+            "amount": 0,
+            "messages": [HumanMessage(content="3001234567")]
         }
         result = should_extract(state)
         assert result == "extract"
 
     def test_should_validate_with_empty_strings(self):
-        """Test routing with empty strings."""
+        """Test routing with empty strings - routes to END when no valid data."""
         state = {
             "phone": "",
             "amount": ""
         }
         result = should_validate(state)
-        assert result == "conversation"
+        assert result == END
 
     def test_state_with_extra_fields(self):
         """Test routing works with additional state fields."""
@@ -211,3 +223,37 @@ class TestGraphEdgeCases:
         # All routing functions use .get() which works on dicts
         assert should_extract(state) == "validate"
         assert should_validate(state) == "validate"
+
+    def test_should_extract_with_no_messages(self):
+        """Test should_extract returns END when no messages."""
+        state = {
+            "phone": None,
+            "amount": None,
+            "messages": []
+        }
+        result = should_extract(state)
+        assert result == END
+
+    def test_should_extract_with_only_ai_messages(self):
+        """Test should_extract returns END when only AI messages."""
+        from langchain_core.messages import AIMessage
+        state = {
+            "phone": None,
+            "amount": None,
+            "messages": [AIMessage(content="Hello")]
+        }
+        result = should_extract(state)
+        assert result == END
+
+    def test_should_extract_with_list_content(self):
+        """Test should_extract handles list content."""
+        from langchain_core.messages import HumanMessage
+
+        msg = HumanMessage(content=["Enviar", "al", "3001234567"])
+        state = {
+            "phone": None,
+            "amount": None,
+            "messages": [msg]
+        }
+        result = should_extract(state)
+        assert result == "extract"

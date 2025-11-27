@@ -12,7 +12,10 @@ from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from httpx import AsyncClient
 from fastapi.testclient import TestClient
+
+from apps.orchestrator.api.app import app
 
 
 # Test database URL
@@ -105,6 +108,14 @@ def sample_transaction_data():
         "amount": 50000,
         "conversation_id": "conv-123",
     }
+
+
+@pytest.fixture
+async def async_client() -> AsyncGenerator[AsyncClient, None]:
+    """Create async HTTP client for testing FastAPI app."""
+    from httpx import ASGITransport
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
 
 
 # Markers

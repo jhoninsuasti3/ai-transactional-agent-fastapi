@@ -1,0 +1,271 @@
+name: CI - Tests and Quality Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.4.18"
+
+jobs:
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/${{ env.UV_VERSION }}/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run ruff linter
+        run: |
+          source .venv/bin/activate
+          ruff check apps/ tests/ --output-format=github
+        continue-on-error: true
+
+      - name: Run ruff formatter check
+        run: |
+          source .venv/bin/activate
+          ruff format --check apps/ tests/
+        continue-on-error: true
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Database configuration for tests
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+      DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/testdb
+
+      # LangGraph checkpoint database
+      LANGGRAPH_CHECKPOINT_URL: postgresql://testuser:testpass@localhost:5432/testdb
+
+      # API Configuration
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o-mini
+      TRANSACTION_SERVICE_URL: http://localhost:8001
+
+      # Application settings
+      APP_NAME: "AI Transactional Agent"
+      APP_VERSION: "1.0.0"
+      ENVIRONMENT: testing
+      DEBUG: "true"
+      LOG_LEVEL: INFO
+
+      # Security
+      SECRET_KEY: test-secret-key-for-ci-only
+
+      # CORS
+      CORS_ORIGINS: "*"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/${{ env.UV_VERSION }}/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U testuser && break
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Run database migrations
+        run: |
+          source .venv/bin/activate
+          # Add your migration commands here if you have any
+          # alembic upgrade head
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/unit/ -v --tb=short --junitxml=reports/unit-tests.xml
+
+      - name: Run integration tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/integration/ -v --tb=short --junitxml=reports/integration-tests.xml
+
+      - name: Run all tests with coverage
+        run: |
+          source .venv/bin/activate
+          pytest tests/ \
+            --cov=apps \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term \
+            --cov-fail-under=70 \
+            --junitxml=reports/all-tests.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: reports/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/${{ env.UV_VERSION }}/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run safety check (dependency vulnerabilities)
+        run: |
+          source .venv/bin/activate
+          pip install safety
+          safety check --json || true
+        continue-on-error: true
+
+      - name: Run bandit (security issues in code)
+        run: |
+          source .venv/bin/activate
+          pip install bandit
+          bandit -r apps/ -f json -o bandit-report.json || true
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (test)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ai-transactional-agent:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, security, build]
+    if: always()
+
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Lint status: ${{ needs.lint.result }}"
+          echo "Test status: ${{ needs.test.result }}"
+          echo "Security status: ${{ needs.security.result }}"
+          echo "Build status: ${{ needs.build.result }}"
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "❌ Tests failed!"
+            exit 1
+          fi
+
+          echo "✅ All critical checks passed!"

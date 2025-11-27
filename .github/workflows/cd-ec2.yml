@@ -1,0 +1,228 @@
+name: CD - Deploy to EC2 (Alternative)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_USER: ubuntu
+
+jobs:
+  test:
+    name: Run Tests Before Deploy
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/testdb
+      LANGGRAPH_CHECKPOINT_URL: postgresql://testuser:testpass@localhost:5432/testdb
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ENVIRONMENT: testing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/0.4.18/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/ --cov=apps --cov-fail-under=70
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment package
+        run: |
+          tar -czf deploy.tar.gz \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.env' \
+            .
+
+      - name: Copy files to EC2
+        run: |
+          scp deploy.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/
+
+      - name: Deploy on EC2
+        run: |
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
+            set -e
+
+            # Define app directory
+            APP_DIR="/home/ubuntu/ai-transactional-agent"
+            BACKUP_DIR="/home/ubuntu/backups/ai-transactional-agent-$(date +%Y%m%d-%H%M%S)"
+
+            # Create backup of current deployment
+            if [ -d "$APP_DIR" ]; then
+              echo "Creating backup..."
+              mkdir -p /home/ubuntu/backups
+              cp -r "$APP_DIR" "$BACKUP_DIR"
+            fi
+
+            # Create app directory
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
+            # Extract new deployment
+            tar -xzf /tmp/deploy.tar.gz
+
+            # Install/update dependencies
+            if [ ! -d ".venv" ]; then
+              curl -LsSf https://astral.sh/uv/0.4.18/install.sh | sh
+              export PATH="$HOME/.cargo/bin:$PATH"
+              uv venv
+            fi
+
+            source .venv/bin/activate
+            uv pip install -r requirements.txt
+
+            # Update environment variables
+            cat > .env << EOF
+            # Application
+            APP_NAME="AI Transactional Agent"
+            APP_VERSION="1.0.0"
+            ENVIRONMENT=production
+            DEBUG=false
+            LOG_LEVEL=INFO
+
+            # Database
+            POSTGRES_HOST=${{ secrets.PROD_POSTGRES_HOST }}
+            POSTGRES_PORT=5432
+            POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
+
+            # LangGraph Checkpoint
+            LANGGRAPH_CHECKPOINT_URL=postgresql://${{ secrets.PROD_POSTGRES_USER }}:${{ secrets.PROD_POSTGRES_PASSWORD }}@${{ secrets.PROD_POSTGRES_HOST }}:5432/${{ secrets.PROD_POSTGRES_DB }}
+
+            # OpenAI
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            OPENAI_MODEL=gpt-4o-mini
+
+            # Transaction Service
+            TRANSACTION_SERVICE_URL=${{ secrets.TRANSACTION_SERVICE_URL }}
+
+            # Security
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+
+            # CORS
+            CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+            EOF
+
+            # Reload systemd service
+            sudo systemctl restart ai-transactional-agent
+
+            # Verify service is running
+            sleep 5
+            if sudo systemctl is-active --quiet ai-transactional-agent; then
+              echo "✅ Service started successfully"
+            else
+              echo "❌ Service failed to start"
+              echo "Restoring backup..."
+              rm -rf "$APP_DIR"
+              cp -r "$BACKUP_DIR" "$APP_DIR"
+              sudo systemctl restart ai-transactional-agent
+              exit 1
+            fi
+
+            # Cleanup
+            rm /tmp/deploy.tar.gz
+          ENDSSH
+
+      - name: Health check
+        run: |
+          echo "Waiting for service to be ready..."
+          sleep 10
+
+          for i in {1..10}; do
+            if curl -f -s "http://${{ env.EC2_HOST }}:8000/health" | grep -q "healthy"; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+
+          echo "❌ Health check failed"
+          exit 1
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Rollback to previous version
+        run: |
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
+            LATEST_BACKUP=$(ls -t /home/ubuntu/backups/ | head -1)
+
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "Rolling back to: $LATEST_BACKUP"
+              rm -rf /home/ubuntu/ai-transactional-agent
+              cp -r "/home/ubuntu/backups/$LATEST_BACKUP" /home/ubuntu/ai-transactional-agent
+              sudo systemctl restart ai-transactional-agent
+              echo "✅ Rollback completed"
+            else
+              echo "❌ No backup found for rollback"
+              exit 1
+            fi
+          ENDSSH
