@@ -6,7 +6,8 @@ through natural language conversation.
 
 from typing import Any
 
-from langgraph.graph import END, START, CompiledStateGraph, StateGraph
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from apps.agents.transactional.nodes.conversation import conversation_node
 from apps.agents.transactional.nodes.extractor import extractor_node

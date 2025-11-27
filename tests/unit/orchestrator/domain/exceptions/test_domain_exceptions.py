@@ -5,22 +5,22 @@ from uuid import uuid4
 import pytest
 
 from apps.orchestrator.domain.exceptions.base import (
-    BusinessRuleViolation,
-    DomainException,
+    BusinessRuleViolationError,
+    DomainError,
     EntityAlreadyExistsError,
     EntityNotFoundError,
-    InvalidStateTransition,
+    InvalidStateTransitionError,
     ValidationError,
 )
 
 
 @pytest.mark.unit
-class TestDomainException:
-    """Test suite for DomainException base class."""
+class TestDomainError:
+    """Test suite for DomainError base class."""
 
     def test_create_domain_exception_with_message_only(self):
         """Test creating domain exception with message only."""
-        exc = DomainException("Something went wrong")
+        exc = DomainError("Something went wrong")
         assert exc.message == "Something went wrong"
         assert exc.details == {}
         assert str(exc) == "Something went wrong"
@@ -28,7 +28,7 @@ class TestDomainException:
     def test_create_domain_exception_with_details(self):
         """Test creating domain exception with details."""
         details = {"code": "ERR_001", "severity": "high"}
-        exc = DomainException("Error occurred", details=details)
+        exc = DomainError("Error occurred", details=details)
 
         assert exc.message == "Error occurred"
         assert exc.details == details
@@ -36,20 +36,20 @@ class TestDomainException:
         assert exc.details["severity"] == "high"
 
     def test_domain_exception_inherits_from_exception(self):
-        """Test DomainException inherits from Exception."""
-        exc = DomainException("Test error")
+        """Test DomainError inherits from Exception."""
+        exc = DomainError("Test error")
         assert isinstance(exc, Exception)
 
     def test_domain_exception_can_be_raised(self):
         """Test domain exception can be raised and caught."""
-        with pytest.raises(DomainException) as exc_info:
-            raise DomainException("Test error")
+        with pytest.raises(DomainError) as exc_info:
+            raise DomainError("Test error")
 
         assert exc_info.value.message == "Test error"
 
     def test_domain_exception_with_empty_details(self):
         """Test domain exception with None details becomes empty dict."""
-        exc = DomainException("Error", details=None)
+        exc = DomainError("Error", details=None)
         assert exc.details == {}
 
 
@@ -85,9 +85,9 @@ class TestEntityNotFoundError:
         assert exc.details["entity_id"] == 12345
 
     def test_entity_not_found_inherits_from_domain_exception(self):
-        """Test EntityNotFoundError inherits from DomainException."""
+        """Test EntityNotFoundError inherits from DomainError."""
         exc = EntityNotFoundError("Test", 1)
-        assert isinstance(exc, DomainException)
+        assert isinstance(exc, DomainError)
         assert isinstance(exc, Exception)
 
     def test_entity_not_found_can_be_raised(self):
@@ -130,9 +130,9 @@ class TestEntityAlreadyExistsError:
         assert exc.details["value"] == 123456
 
     def test_entity_already_exists_inherits_from_domain_exception(self):
-        """Test EntityAlreadyExistsError inherits from DomainException."""
+        """Test EntityAlreadyExistsError inherits from DomainError."""
         exc = EntityAlreadyExistsError("Test", "field", "value")
-        assert isinstance(exc, DomainException)
+        assert isinstance(exc, DomainError)
 
     def test_entity_already_exists_can_be_raised(self):
         """Test entity already exists error can be raised."""
@@ -186,9 +186,9 @@ class TestValidationError:
         assert exc.details["field"] == "count"
 
     def test_validation_error_inherits_from_domain_exception(self):
-        """Test ValidationError inherits from DomainException."""
+        """Test ValidationError inherits from DomainError."""
         exc = ValidationError("Test")
-        assert isinstance(exc, DomainException)
+        assert isinstance(exc, DomainError)
 
     def test_validation_error_can_be_raised(self):
         """Test validation error can be raised."""
@@ -200,12 +200,12 @@ class TestValidationError:
 
 
 @pytest.mark.unit
-class TestBusinessRuleViolation:
-    """Test suite for BusinessRuleViolation."""
+class TestBusinessRuleViolationError:
+    """Test suite for BusinessRuleViolationError."""
 
     def test_create_business_rule_violation_without_context(self):
         """Test creating business rule violation without context."""
-        exc = BusinessRuleViolation(
+        exc = BusinessRuleViolationError(
             "MAX_DAILY_TRANSACTIONS", "User has exceeded maximum daily transactions"
         )
 
@@ -216,7 +216,7 @@ class TestBusinessRuleViolation:
     def test_create_business_rule_violation_with_context(self):
         """Test creating business rule violation with context."""
         context = {"user_id": "user-123", "current_count": 10, "max_allowed": 5}
-        exc = BusinessRuleViolation(
+        exc = BusinessRuleViolationError(
             "MAX_DAILY_TRANSACTIONS", "Too many transactions", context=context
         )
 
@@ -229,7 +229,7 @@ class TestBusinessRuleViolation:
     def test_business_rule_violation_context_merged_with_rule(self):
         """Test context is merged with rule in details."""
         context = {"amount": 10000, "limit": 5000}
-        exc = BusinessRuleViolation("AMOUNT_LIMIT", "Amount exceeds limit", context)
+        exc = BusinessRuleViolationError("AMOUNT_LIMIT", "Amount exceeds limit", context)
 
         # Both rule and context should be in details
         assert "rule" in exc.details
@@ -238,20 +238,20 @@ class TestBusinessRuleViolation:
 
     def test_business_rule_violation_with_none_context(self):
         """Test business rule violation with None context."""
-        exc = BusinessRuleViolation("TEST_RULE", "Test message", context=None)
+        exc = BusinessRuleViolationError("TEST_RULE", "Test message", context=None)
 
         assert exc.details["rule"] == "TEST_RULE"
         assert len(exc.details) == 1
 
     def test_business_rule_violation_inherits_from_domain_exception(self):
-        """Test BusinessRuleViolation inherits from DomainException."""
-        exc = BusinessRuleViolation("RULE", "Message")
-        assert isinstance(exc, DomainException)
+        """Test BusinessRuleViolationError inherits from DomainError."""
+        exc = BusinessRuleViolationError("RULE", "Message")
+        assert isinstance(exc, DomainError)
 
     def test_business_rule_violation_can_be_raised(self):
         """Test business rule violation can be raised."""
-        with pytest.raises(BusinessRuleViolation) as exc_info:
-            raise BusinessRuleViolation(
+        with pytest.raises(BusinessRuleViolationError) as exc_info:
+            raise BusinessRuleViolationError(
                 "INSUFFICIENT_FUNDS", "Account balance too low", {"balance": 100, "required": 500}
             )
 
@@ -260,12 +260,12 @@ class TestBusinessRuleViolation:
 
 
 @pytest.mark.unit
-class TestInvalidStateTransition:
-    """Test suite for InvalidStateTransition."""
+class TestInvalidStateTransitionError:
+    """Test suite for InvalidStateTransitionError."""
 
     def test_create_invalid_state_transition(self):
         """Test creating invalid state transition error."""
-        exc = InvalidStateTransition("Transaction", "completed", "pending")
+        exc = InvalidStateTransitionError("Transaction", "completed", "pending")
 
         assert "Invalid transition" in exc.message
         assert "Transaction" in exc.message
@@ -277,28 +277,28 @@ class TestInvalidStateTransition:
 
     def test_invalid_state_transition_message_format(self):
         """Test message format of invalid state transition."""
-        exc = InvalidStateTransition("Order", "shipped", "pending")
+        exc = InvalidStateTransitionError("Order", "shipped", "pending")
 
         expected = "Invalid transition for Order: shipped -> pending"
         assert exc.message == expected
 
     def test_invalid_state_transition_with_different_states(self):
         """Test invalid state transition with different states."""
-        exc = InvalidStateTransition("Conversation", "abandoned", "active")
+        exc = InvalidStateTransitionError("Conversation", "abandoned", "active")
 
         assert exc.details["entity"] == "Conversation"
         assert exc.details["from_state"] == "abandoned"
         assert exc.details["to_state"] == "active"
 
     def test_invalid_state_transition_inherits_from_domain_exception(self):
-        """Test InvalidStateTransition inherits from DomainException."""
-        exc = InvalidStateTransition("Test", "state1", "state2")
-        assert isinstance(exc, DomainException)
+        """Test InvalidStateTransitionError inherits from DomainError."""
+        exc = InvalidStateTransitionError("Test", "state1", "state2")
+        assert isinstance(exc, DomainError)
 
     def test_invalid_state_transition_can_be_raised(self):
         """Test invalid state transition can be raised."""
-        with pytest.raises(InvalidStateTransition) as exc_info:
-            raise InvalidStateTransition("Payment", "refunded", "processing")
+        with pytest.raises(InvalidStateTransitionError) as exc_info:
+            raise InvalidStateTransitionError("Payment", "refunded", "processing")
 
         assert "Payment" in str(exc_info.value)
         assert "refunded" in str(exc_info.value)
@@ -310,40 +310,40 @@ class TestExceptionHierarchy:
     """Test suite for exception hierarchy."""
 
     def test_all_custom_exceptions_inherit_from_domain_exception(self):
-        """Test all custom exceptions inherit from DomainException."""
+        """Test all custom exceptions inherit from DomainError."""
         exceptions = [
             EntityNotFoundError("Test", 1),
             EntityAlreadyExistsError("Test", "field", "value"),
             ValidationError("Test"),
-            BusinessRuleViolation("RULE", "Message"),
-            InvalidStateTransition("Entity", "from", "to"),
+            BusinessRuleViolationError("RULE", "Message"),
+            InvalidStateTransitionError("Entity", "from", "to"),
         ]
 
         for exc in exceptions:
-            assert isinstance(exc, DomainException)
+            assert isinstance(exc, DomainError)
             assert isinstance(exc, Exception)
 
     def test_can_catch_all_domain_exceptions(self):
-        """Test can catch all domain exceptions with DomainException."""
+        """Test can catch all domain exceptions with DomainError."""
         # EntityNotFoundError
-        with pytest.raises(DomainException):
+        with pytest.raises(DomainError):
             raise EntityNotFoundError("Test", 1)
 
         # EntityAlreadyExistsError
-        with pytest.raises(DomainException):
+        with pytest.raises(DomainError):
             raise EntityAlreadyExistsError("Test", "field", "value")
 
         # ValidationError
-        with pytest.raises(DomainException):
+        with pytest.raises(DomainError):
             raise ValidationError("Test")
 
-        # BusinessRuleViolation
-        with pytest.raises(DomainException):
-            raise BusinessRuleViolation("RULE", "Message")
+        # BusinessRuleViolationError
+        with pytest.raises(DomainError):
+            raise BusinessRuleViolationError("RULE", "Message")
 
-        # InvalidStateTransition
-        with pytest.raises(DomainException):
-            raise InvalidStateTransition("Entity", "from", "to")
+        # InvalidStateTransitionError
+        with pytest.raises(DomainError):
+            raise InvalidStateTransitionError("Entity", "from", "to")
 
     def test_can_catch_specific_exceptions(self):
         """Test can catch specific exception types."""

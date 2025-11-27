@@ -113,6 +113,8 @@ class TestTransactionAPIClient:
         mock_response.json.return_value = {
             "transaction_id": "TXN-12345",
             "status": "completed",
+            "amount": 50000,
+            "currency": "COP",
             "message": "Transaction completed",
         }
 
@@ -135,6 +137,8 @@ class TestTransactionAPIClient:
             "transaction_id": "TXN-12345",
             "status": "completed",
             "amount": 50000,
+            "currency": "COP",
+            "created_at": "2025-01-27T12:00:00Z",
         }
 
         with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:

@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 
 from apps.orchestrator.api.exception_handlers.handlers import register_exception_handlers
 from apps.orchestrator.core.exceptions import (
-    AppException,
+    AppError,
     ExternalServiceError,
-    HTTPException,
+    HTTPError,
     NotFoundError,
 )
-from apps.orchestrator.domain.exceptions.base import DomainException
+from apps.orchestrator.domain.exceptions.base import DomainError
 
 
 @pytest.fixture
@@ -26,11 +26,11 @@ def test_app():
     # Add test routes that raise exceptions
     @app.get("/app-exception")
     async def raise_app_exception():
-        raise AppException("App error", details={"code": "APP001"})
+        raise AppError("App error", details={"code": "APP001"})
 
     @app.get("/domain-exception")
     async def raise_domain_exception():
-        raise DomainException("Domain error")
+        raise DomainError("Domain error")
 
     @app.get("/external-service-error")
     async def raise_external_service_error():
@@ -42,7 +42,7 @@ def test_app():
 
     @app.get("/http-exception")
     async def raise_http_exception():
-        raise HTTPException(status_code=400, message="Bad request")
+        raise HTTPError(status_code=400, message="Bad request")
 
     @app.get("/general-exception")
     async def raise_general_exception():
@@ -66,7 +66,7 @@ class TestExceptionHandlers:
     """Test suite for exception handlers."""
 
     def test_app_exception_handler(self, client):
-        """Test AppException is handled correctly."""
+        """Test AppError is handled correctly."""
         response = client.get("/app-exception")
 
         assert response.status_code == 500
@@ -75,7 +75,7 @@ class TestExceptionHandlers:
         assert data["error"] == "Internal server error"
 
     def test_domain_exception_handler(self, client):
-        """Test DomainException is handled correctly."""
+        """Test DomainError is handled correctly."""
         response = client.get("/domain-exception")
 
         assert response.status_code == 400
@@ -103,7 +103,7 @@ class TestExceptionHandlers:
         assert "TXN-12345" in data["error"]
 
     def test_http_exception_handler(self, client):
-        """Test HTTPException is handled correctly."""
+        """Test HTTPError is handled correctly."""
         response = client.get("/http-exception")
 
         assert response.status_code == 400

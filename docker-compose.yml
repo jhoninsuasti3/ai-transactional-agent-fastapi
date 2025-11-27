@@ -49,6 +49,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfiles/Dockerfile.orchestrator
+      target: production
     container_name: transactional-agent-orchestrator
     restart: unless-stopped
     env_file:
