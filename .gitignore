@@ -233,7 +233,8 @@ pgdata/
 
 # Keep our docs/ but exclude legacy/build directories
 docs/_build/
-docs/
+docs/_archive
+docs/contex_aditional
 
 # Reference projects (keep locally, don't commit)
 api-gabi-logic/

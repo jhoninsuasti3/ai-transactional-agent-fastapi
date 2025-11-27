@@ -17,16 +17,23 @@ from sqlalchemy.pool import NullPool
 from apps.orchestrator.core.config import settings
 
 # Create async engine with connection pooling
-engine: AsyncEngine = create_async_engine(
-    settings.database_url_str,
-    echo=settings.DATABASE_ECHO,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=3600,  # Recycle connections after 1 hour
-    # Use NullPool for testing to avoid connection pool issues
-    poolclass=NullPool if settings.DEBUG else None,
-)
+# NullPool doesn't accept pool_size/max_overflow, so we need conditional config
+engine: AsyncEngine
+if settings.DEBUG:
+    engine = create_async_engine(
+        settings.database_url_str,
+        echo=settings.DATABASE_ECHO,
+        poolclass=NullPool,
+    )
+else:
+    engine = create_async_engine(
+        settings.database_url_str,
+        echo=settings.DATABASE_ECHO,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_recycle=3600,  # Recycle connections after 1 hour
+    )
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(

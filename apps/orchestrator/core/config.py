@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     )
     APP_VERSION: str = Field(default="1.0.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
-    ENVIRONMENT: Literal["development", "staging", "production"] = Field(
+    ENVIRONMENT: Literal["development", "staging", "production", "testing"] = Field(
         default="development",
         description="Environment",
     )

@@ -1,0 +1,47 @@
+# =============================================================================
+# Docker Compose for Testing
+# Extends base docker-compose.yml with test-specific configuration
+# =============================================================================
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml up orchestrator-test
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml run orchestrator-test
+#
+
+services:
+  # Test orchestrator with dev dependencies
+  orchestrator-test:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/Dockerfile.orchestrator
+      target: test  # Use the test stage
+    container_name: transactional-agent-orchestrator-test
+    env_file:
+      - .env
+    environment:
+      # Database (use same postgres from base compose)
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-transactional_agent}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+      - LANGGRAPH_CHECKPOINT_DB=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
+      # Services
+      - TRANSACTION_SERVICE_URL=http://mock-api:8001
+      # Testing
+      - ENVIRONMENT=testing
+      - DEBUG=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock-api:
+        condition: service_healthy
+    networks:
+      - agent-network
+    volumes:
+      # Mount only output directories (not files that pytest-cov creates)
+      - ./htmlcov:/app/htmlcov
+      - ./coverage.xml:/app/coverage.xml
+    # Override command to run specific tests if needed
+    command: [".venv/bin/pytest", "-v", "--cov=apps", "--cov-report=term-missing", "--cov-report=html", "--cov-report=xml"]

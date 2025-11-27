@@ -1,9 +1,10 @@
 # =============================================================================
 # Dockerfile for AI Transactional Agent - Orchestrator Service
 # Uses uv for fast, reliable Python dependency management
+# Multi-stage build: production (default) and test
 # =============================================================================
 
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -24,10 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency files
 COPY pyproject.toml uv.lock README.md ./
 
-# Install dependencies without installing the project itself
+# =============================================================================
+# Production stage (default)
+# =============================================================================
+FROM base AS production
+
+# Install only production dependencies
 RUN /root/.local/bin/uv sync --frozen --no-dev --no-install-project
 
-# Copy application code
+# Copy application code (production)
 COPY apps/ /app/apps/
 COPY alembic/ /app/alembic/
 COPY alembic.ini /app/alembic.ini
@@ -50,3 +56,28 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Run migrations and start application
 CMD ["sh", "-c", "cd /app && .venv/bin/alembic upgrade head && .venv/bin/uvicorn apps.orchestrator.api.app:app --host 0.0.0.0 --port 8002"]
+
+# =============================================================================
+# Test stage (includes dev dependencies)
+# =============================================================================
+FROM base AS test
+
+# Install ALL dependencies (including dev/test)
+RUN /root/.local/bin/uv sync --frozen --no-install-project
+
+# Copy application code
+COPY apps/ /app/apps/
+COPY alembic/ /app/alembic/
+COPY tests/ /app/tests/
+COPY alembic.ini main.py ./
+
+# Create non-root user
+RUN useradd -m -u 1000 testuser && \
+    chown -R testuser:testuser /app
+USER testuser
+
+# Set PATH
+ENV PATH="/root/.local/bin:/app/.venv/bin:$PATH"
+
+# Default command runs tests
+CMD [".venv/bin/pytest", "-v", "--cov=apps", "--cov-report=term-missing", "--cov-report=html"]
