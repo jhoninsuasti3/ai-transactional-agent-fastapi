@@ -1,14 +1,15 @@
 """Unit tests for transaction schemas."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
 from apps.orchestrator.v1.schemas.transaction import (
-    TransactionStatus,
     TransactionCreate,
-    TransactionResponse,
     TransactionDetail,
+    TransactionResponse,
+    TransactionStatus,
 )
 
 
@@ -29,56 +30,37 @@ class TestTransactionCreate:
 
     def test_valid_transaction_create(self):
         """Test valid transaction creation."""
-        transaction = TransactionCreate(
-            recipient_phone="3001234567",
-            amount=50000
-        )
+        transaction = TransactionCreate(recipient_phone="3001234567", amount=50000)
         assert transaction.recipient_phone == "3001234567"
         assert transaction.amount == 50000
         assert transaction.currency == "COP"
 
     def test_transaction_with_custom_currency(self):
         """Test transaction with custom currency."""
-        transaction = TransactionCreate(
-            recipient_phone="3001234567",
-            amount=100.50,
-            currency="USD"
-        )
+        transaction = TransactionCreate(recipient_phone="3001234567", amount=100.50, currency="USD")
         assert transaction.currency == "USD"
 
     def test_invalid_phone_pattern_fails(self):
         """Test that invalid phone pattern fails validation."""
         with pytest.raises(ValidationError) as exc_info:
-            TransactionCreate(
-                recipient_phone="123",
-                amount=50000
-            )
+            TransactionCreate(recipient_phone="123", amount=50000)
         assert "recipient_phone" in str(exc_info.value)
 
     def test_phone_with_non_digits_fails(self):
         """Test that phone with non-digits fails validation."""
         with pytest.raises(ValidationError):
-            TransactionCreate(
-                recipient_phone="300ABC4567",
-                amount=50000
-            )
+            TransactionCreate(recipient_phone="300ABC4567", amount=50000)
 
     def test_negative_amount_fails(self):
         """Test that negative amount fails validation."""
         with pytest.raises(ValidationError) as exc_info:
-            TransactionCreate(
-                recipient_phone="3001234567",
-                amount=-1000
-            )
+            TransactionCreate(recipient_phone="3001234567", amount=-1000)
         assert "amount" in str(exc_info.value)
 
     def test_zero_amount_fails(self):
         """Test that zero amount fails validation."""
         with pytest.raises(ValidationError):
-            TransactionCreate(
-                recipient_phone="3001234567",
-                amount=0
-            )
+            TransactionCreate(recipient_phone="3001234567", amount=0)
 
     def test_missing_required_fields_fail(self):
         """Test that missing required fields fail validation."""
@@ -99,7 +81,7 @@ class TestTransactionResponse:
             recipient_phone="3001234567",
             amount=50000,
             currency="COP",
-            created_at=now
+            created_at=now,
         )
         assert response.transaction_id == "TXN-12345"
         assert response.status == TransactionStatus.COMPLETED
@@ -119,7 +101,7 @@ class TestTransactionResponse:
             amount=50000,
             currency="COP",
             created_at=created,
-            completed_at=completed
+            completed_at=completed,
         )
         assert response.completed_at == completed
 
@@ -132,7 +114,7 @@ class TestTransactionResponse:
             amount=50000,
             currency="COP",
             created_at=datetime.utcnow(),
-            error_message="Insufficient funds"
+            error_message="Insufficient funds",
         )
         assert response.status == TransactionStatus.FAILED
         assert response.error_message == "Insufficient funds"
@@ -151,7 +133,7 @@ class TestTransactionDetail:
             recipient_phone="3001234567",
             amount=50000,
             currency="COP",
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
         assert detail.transaction_id == "TXN-12345"
         assert detail.conversation_id == "conv-123"
@@ -159,11 +141,7 @@ class TestTransactionDetail:
 
     def test_transaction_detail_with_metadata(self):
         """Test transaction detail with metadata."""
-        metadata = {
-            "user_id": "user-123",
-            "device": "mobile",
-            "ip_address": "192.168.1.1"
-        }
+        metadata = {"user_id": "user-123", "device": "mobile", "ip_address": "192.168.1.1"}
         detail = TransactionDetail(
             transaction_id="TXN-12345",
             conversation_id="conv-123",
@@ -172,7 +150,7 @@ class TestTransactionDetail:
             amount=50000,
             currency="COP",
             created_at=datetime.utcnow(),
-            metadata=metadata
+            metadata=metadata,
         )
         assert detail.metadata == metadata
         assert detail.metadata["user_id"] == "user-123"

@@ -102,7 +102,7 @@ class Message(BaseModel):
         if len(self.content) <= max_length:
             return self.content
 
-        return f"{self.content[:max_length - 3]}..."
+        return f"{self.content[: max_length - 3]}..."
 
     def __str__(self) -> str:
         """String representation."""

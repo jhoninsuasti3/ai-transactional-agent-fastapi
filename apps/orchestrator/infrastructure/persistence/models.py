@@ -10,7 +10,9 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
-    UUID as SQLAlchemyUUID,
+    UUID as SQLAlchemyUUID,  # noqa: N811
+)
+from sqlalchemy import (
     DateTime,
     Enum,
     Float,

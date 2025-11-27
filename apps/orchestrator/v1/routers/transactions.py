@@ -57,19 +57,21 @@ async def get_transaction(transaction_id: str) -> TransactionResponse:
         error_msg = str(e)
 
         if "not found" in error_msg.lower():
-            raise HTTPException(status_code=404, detail=f"Transaction {transaction_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Transaction {transaction_id} not found"
+            ) from e
 
         if "unavailable" in error_msg.lower() or "circuit" in error_msg.lower():
             raise HTTPException(
                 status_code=503,
                 detail="Transaction service temporarily unavailable",
-            )
+            ) from e
 
         # Generic error
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve transaction: {error_msg}",
-        )
+        ) from e
 
 
 @router.get("/health")

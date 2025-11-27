@@ -1,15 +1,16 @@
 """Unit tests for conversation schemas."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
 from apps.orchestrator.v1.schemas.conversation import (
-    ConversationStatus,
-    MessageRole,
-    Message,
     ConversationDetail,
+    ConversationStatus,
     ConversationSummary,
+    Message,
+    MessageRole,
 )
 
 
@@ -41,10 +42,7 @@ class TestMessage:
 
     def test_valid_message_user(self):
         """Test valid user message creation."""
-        message = Message(
-            role=MessageRole.USER,
-            content="Hola, quiero enviar dinero"
-        )
+        message = Message(role=MessageRole.USER, content="Hola, quiero enviar dinero")
         assert message.role == MessageRole.USER
         assert message.content == "Hola, quiero enviar dinero"
         assert isinstance(message.timestamp, datetime)
@@ -52,20 +50,13 @@ class TestMessage:
 
     def test_valid_message_assistant(self):
         """Test valid assistant message creation."""
-        message = Message(
-            role=MessageRole.ASSISTANT,
-            content="Claro, puedo ayudarte con eso"
-        )
+        message = Message(role=MessageRole.ASSISTANT, content="Claro, puedo ayudarte con eso")
         assert message.role == MessageRole.ASSISTANT
 
     def test_message_with_metadata(self):
         """Test message with metadata."""
         metadata = {"intent": "send_money", "confidence": 0.95}
-        message = Message(
-            role=MessageRole.USER,
-            content="Enviar 50000",
-            metadata=metadata
-        )
+        message = Message(role=MessageRole.USER, content="Enviar 50000", metadata=metadata)
         assert message.metadata == metadata
         assert message.metadata["confidence"] == 0.95
 
@@ -73,9 +64,7 @@ class TestMessage:
         """Test message with custom timestamp."""
         custom_time = datetime(2025, 1, 25, 10, 0, 0)
         message = Message(
-            role=MessageRole.SYSTEM,
-            content="Sistema iniciado",
-            timestamp=custom_time
+            role=MessageRole.SYSTEM, content="Sistema iniciado", timestamp=custom_time
         )
         assert message.timestamp == custom_time
 
@@ -93,14 +82,14 @@ class TestConversationDetail:
         """Test valid conversation detail creation."""
         messages = [
             Message(role=MessageRole.USER, content="Hola"),
-            Message(role=MessageRole.ASSISTANT, content="Hola! En qué puedo ayudarte?")
+            Message(role=MessageRole.ASSISTANT, content="Hola! En qué puedo ayudarte?"),
         ]
         conversation = ConversationDetail(
             conversation_id="conv-123",
             user_id="user-456",
             status=ConversationStatus.ACTIVE,
             messages=messages,
-            started_at=datetime.utcnow()
+            started_at=datetime.utcnow(),
         )
         assert conversation.conversation_id == "conv-123"
         assert conversation.user_id == "user-456"
@@ -119,7 +108,7 @@ class TestConversationDetail:
             messages=messages,
             started_at=datetime.utcnow(),
             ended_at=datetime.utcnow(),
-            transaction_ids=["TXN-111", "TXN-222"]
+            transaction_ids=["TXN-111", "TXN-222"],
         )
         assert conversation.status == ConversationStatus.COMPLETED
         assert conversation.ended_at is not None
@@ -133,7 +122,7 @@ class TestConversationDetail:
             user_id="user-456",
             status=ConversationStatus.ACTIVE,
             messages=[],
-            started_at=datetime.utcnow()
+            started_at=datetime.utcnow(),
         )
         assert len(conversation.messages) == 0
 
@@ -149,7 +138,7 @@ class TestConversationSummary:
             user_id="user-456",
             status=ConversationStatus.ACTIVE,
             message_count=5,
-            started_at=datetime.utcnow()
+            started_at=datetime.utcnow(),
         )
         assert summary.conversation_id == "conv-123"
         assert summary.user_id == "user-456"
@@ -166,7 +155,7 @@ class TestConversationSummary:
             message_count=10,
             started_at=datetime.utcnow(),
             ended_at=datetime.utcnow(),
-            last_message="Gracias por usar nuestro servicio"
+            last_message="Gracias por usar nuestro servicio",
         )
         assert summary.status == ConversationStatus.COMPLETED
         assert summary.message_count == 10
@@ -180,6 +169,6 @@ class TestConversationSummary:
             status=ConversationStatus.ABANDONED,
             message_count=3,
             started_at=datetime.utcnow(),
-            ended_at=datetime.utcnow()
+            ended_at=datetime.utcnow(),
         )
         assert summary.status == ConversationStatus.ABANDONED

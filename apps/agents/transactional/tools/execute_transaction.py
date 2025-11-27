@@ -5,9 +5,9 @@ Executes confirmed money transfers using the Mock Transaction API.
 
 from typing import Annotated
 
+import structlog
 from langchain_core.tools import tool
 from pydantic import Field
-import structlog
 
 from apps.agents.transactional.tools.http_client import transaction_client
 
@@ -18,7 +18,9 @@ logger = structlog.get_logger(__name__)
 def execute_transaction_tool(
     phone: Annotated[str, Field(description="Recipient phone number (10 digits)")],
     amount: Annotated[float, Field(description="Amount to transfer (must be > 0)", gt=0)],
-    validation_id: Annotated[str | None, Field(description="Validation ID from previous validation")] = None
+    validation_id: Annotated[
+        str | None, Field(description="Validation ID from previous validation")
+    ] = None,
 ) -> dict:
     """Ejecuta una transacción de envío de dinero previamente confirmada.
 
@@ -56,43 +58,23 @@ def execute_transaction_tool(
             'error': 'Monto excede el límite permitido'
         }
     """
-    logger.info(
-        "executing_transaction",
-        phone=phone,
-        amount=amount,
-        validation_id=validation_id
-    )
+    logger.info("executing_transaction", phone=phone, amount=amount, validation_id=validation_id)
 
     # Validaciones locales
     if amount <= 0:
-        return {
-            "success": False,
-            "status": "failed",
-            "error": "El monto debe ser mayor a 0"
-        }
+        return {"success": False, "status": "failed", "error": "El monto debe ser mayor a 0"}
 
     if len(phone) != 10:
-        return {
-            "success": False,
-            "status": "failed",
-            "error": "El número debe tener 10 dígitos"
-        }
+        return {"success": False, "status": "failed", "error": "El número debe tener 10 dígitos"}
 
     # Llamar al Mock API
     try:
-        payload = {
-            "recipient_phone": phone,
-            "amount": amount,
-            "currency": "COP"
-        }
+        payload = {"recipient_phone": phone, "amount": amount, "currency": "COP"}
 
         if validation_id:
             payload["validation_id"] = validation_id
 
-        response = transaction_client.post(
-            "/api/v1/transactions/execute",
-            json=payload
-        )
+        response = transaction_client.post("/api/v1/transactions/execute", json=payload)
 
         # Determine success from status (Mock API doesn't return "success" field)
         status = response.get("status", "unknown")
@@ -102,7 +84,7 @@ def execute_transaction_tool(
             "transaction_executed",
             success=is_successful,
             transaction_id=response.get("transaction_id"),
-            status=status
+            status=status,
         )
 
         return {
@@ -113,15 +95,10 @@ def execute_transaction_tool(
         }
 
     except Exception as e:
-        logger.error(
-            "transaction_execution_failed",
-            phone=phone,
-            amount=amount,
-            error=str(e)
-        )
+        logger.error("transaction_execution_failed", phone=phone, amount=amount, error=str(e))
 
         return {
             "success": False,
             "status": "failed",
-            "error": f"Error al ejecutar transacción: {str(e)}"
+            "error": f"Error al ejecutar transacción: {str(e)}",
         }

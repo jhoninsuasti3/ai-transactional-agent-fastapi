@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Chat schemas for API v1."""
 
 from pydantic import BaseModel, Field

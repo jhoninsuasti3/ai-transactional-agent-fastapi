@@ -8,15 +8,13 @@ This module provides:
 """
 
 import asyncio
-from typing import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, Mock, patch
+from collections.abc import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from httpx import AsyncClient
-from fastapi.testclient import TestClient
 
 from apps.orchestrator.api.app import app
-
 
 # Test database URL
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -114,6 +112,7 @@ def sample_transaction_data():
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create async HTTP client for testing FastAPI app."""
     from httpx import ASGITransport
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
@@ -121,15 +120,7 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 # Markers
 def pytest_configure(config):
     """Register custom markers."""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "e2e: mark test as an end-to-end test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "e2e: mark test as an end-to-end test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")

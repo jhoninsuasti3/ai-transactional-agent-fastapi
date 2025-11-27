@@ -27,12 +27,11 @@ ESTADO ACTUAL:
 Responde al usuario de forma natural y profesional."""
 
 CONVERSATION_PROMPT = PromptTemplate.from_template(
-    CONVERSATION_SYSTEM_PROMPT,
-    template_format="jinja2"
+    CONVERSATION_SYSTEM_PROMPT, template_format="jinja2"
 )
 
 
-def get_conversation_prompt(phone: str | None = None, amount: float | None = None):
+def get_conversation_prompt(phone: str | None = None, amount: float | None = None) -> SystemMessage:
     """Generate conversation prompt with current state.
 
     Args:

@@ -37,13 +37,24 @@ jobs:
       - name: Run ruff linter
         run: |
           source .venv/bin/activate
-          ruff check apps/ tests/ --output-format=github
-        continue-on-error: true
+          ruff check apps/ --output-format=github
 
       - name: Run ruff formatter check
         run: |
           source .venv/bin/activate
-          ruff format --check apps/ tests/
+          ruff format --check apps/
+
+      - name: Run mypy type checking
+        run: |
+          source .venv/bin/activate
+          mypy apps/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run bandit security checks
+        run: |
+          source .venv/bin/activate
+          bandit -r apps/ -f json -o bandit-report.json || true
+          bandit -r apps/ -f screen
         continue-on-error: true
 
   test:

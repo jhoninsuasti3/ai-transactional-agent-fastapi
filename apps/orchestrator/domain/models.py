@@ -6,7 +6,7 @@ Following Domain-Driven Design (DDD) principles.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -190,34 +190,34 @@ class DomainEvent(BaseModel):
 class TransactionCreated(DomainEvent):
     """Transaction created event."""
 
-    event_type: str = Field(default="transaction.created", const=True)
+    event_type: Literal["transaction.created"] = "transaction.created"
 
 
 class TransactionValidated(DomainEvent):
     """Transaction validated event."""
 
-    event_type: str = Field(default="transaction.validated", const=True)
+    event_type: Literal["transaction.validated"] = "transaction.validated"
 
 
 class TransactionExecuted(DomainEvent):
     """Transaction executed event."""
 
-    event_type: str = Field(default="transaction.executed", const=True)
+    event_type: Literal["transaction.executed"] = "transaction.executed"
 
 
 class TransactionFailed(DomainEvent):
     """Transaction failed event."""
 
-    event_type: str = Field(default="transaction.failed", const=True)
+    event_type: Literal["transaction.failed"] = "transaction.failed"
 
 
 class ConversationStarted(DomainEvent):
     """Conversation started event."""
 
-    event_type: str = Field(default="conversation.started", const=True)
+    event_type: Literal["conversation.started"] = "conversation.started"
 
 
 class ConversationEnded(DomainEvent):
     """Conversation ended event."""
 
-    event_type: str = Field(default="conversation.ended", const=True)
+    event_type: Literal["conversation.ended"] = "conversation.ended"

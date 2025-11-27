@@ -4,10 +4,9 @@ This module creates the LangGraph agent for handling money transfer transactions
 through natural language conversation.
 """
 
-from typing import Optional, TypedDict
+from typing import Any
 
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, START, CompiledStateGraph, StateGraph
 
 from apps.agents.transactional.nodes.conversation import conversation_node
 from apps.agents.transactional.nodes.extractor import extractor_node
@@ -18,7 +17,7 @@ from apps.agents.transactional.routes.validation.route import validation_route
 from apps.agents.transactional.state import TransactionalState
 
 
-def create_transactional_agent(config: Optional[TypedDict] = None):
+def create_transactional_agent(config: dict[str, Any] | None = None) -> CompiledStateGraph:
     """Create the transactional agent graph.
 
     This function builds a LangGraph agent that handles the full transaction flow:

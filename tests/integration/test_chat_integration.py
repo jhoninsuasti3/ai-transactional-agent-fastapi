@@ -1,10 +1,9 @@
 """Integration tests for chat router with mocked dependencies."""
 
-import pytest
-from unittest.mock import patch, AsyncMock, Mock
-from httpx import AsyncClient
+from unittest.mock import Mock, patch
 
-from apps.orchestrator.api.app import app
+import pytest
+from httpx import AsyncClient
 
 
 @pytest.mark.integration
@@ -12,10 +11,12 @@ from apps.orchestrator.api.app import app
 class TestChatIntegration:
     """Integration tests for chat endpoint."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
-    async def test_chat_creates_conversation(self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient):
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
+    async def test_chat_creates_conversation(
+        self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
+    ):
         """Test chat endpoint creates conversation successfully."""
         # Mock checkpointer
         mock_checkpointer_instance = Mock()
@@ -41,8 +42,7 @@ class TestChatIntegration:
 
         # Execute
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Hola", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Hola", "user_id": "test-user"}
         )
 
         # Assert
@@ -51,10 +51,12 @@ class TestChatIntegration:
         assert "conversation_id" in data
         assert "response" in data
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
-    async def test_chat_handles_transaction_completion(self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient):
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
+    async def test_chat_handles_transaction_completion(
+        self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
+    ):
         """Test chat endpoint handles completed transaction."""
         # Mock checkpointer
         mock_checkpointer_instance = Mock()
@@ -83,7 +85,7 @@ class TestChatIntegration:
         # Execute
         response = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Sí confirmo", "user_id": "test-user", "conversation_id": "conv-123"}
+            json={"message": "Sí confirmo", "user_id": "test-user", "conversation_id": "conv-123"},
         )
 
         # Assert
@@ -95,7 +97,7 @@ class TestChatIntegration:
         mock_persistence.save_transaction.assert_called_once()
         mock_persistence.update_conversation_status.assert_called_once()
 
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
     async def test_chat_handles_errors_gracefully(self, mock_get_agent, async_client: AsyncClient):
         """Test chat endpoint handles errors gracefully."""
         # Setup mock to raise exception
@@ -103,8 +105,7 @@ class TestChatIntegration:
 
         # Execute
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Test", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Test", "user_id": "test-user"}
         )
 
         # Assert

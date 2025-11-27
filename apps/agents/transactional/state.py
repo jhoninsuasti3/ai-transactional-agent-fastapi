@@ -3,10 +3,7 @@
 Defines the state structure that flows through the LangGraph agent.
 """
 
-from typing import Annotated, TypedDict
-
 from langgraph.graph import MessagesState
-from langgraph.graph.message import add_messages
 
 
 class TransactionalState(MessagesState):

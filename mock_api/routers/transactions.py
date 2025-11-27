@@ -106,9 +106,7 @@ async def execute_transaction(request: ExecuteRequest) -> ExecuteResponse:
         validation_data["recipient_phone"] != request.recipient_phone
         or validation_data["amount"] != request.amount
     ):
-        raise HTTPException(
-            status_code=400, detail="Transaction data does not match validation"
-        )
+        raise HTTPException(status_code=400, detail="Transaction data does not match validation")
 
     # Generate transaction
     transaction_id = generate_transaction_id()
@@ -118,9 +116,7 @@ async def execute_transaction(request: ExecuteRequest) -> ExecuteResponse:
     # Determine completion time and error message
     completed_at = created_at if status == TransactionStatus.COMPLETED else None
     error_message = (
-        "Payment declined by recipient's bank"
-        if status == TransactionStatus.FAILED
-        else None
+        "Payment declined by recipient's bank" if status == TransactionStatus.FAILED else None
     )
 
     # Store transaction
@@ -167,9 +163,7 @@ async def get_transaction_status(transaction_id: str) -> TransactionDetail:
 
     # Check if transaction exists
     if transaction_id not in transactions:
-        raise HTTPException(
-            status_code=404, detail=f"Transaction {transaction_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Transaction {transaction_id} not found")
 
     return transactions[transaction_id]
 

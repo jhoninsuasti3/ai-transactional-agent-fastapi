@@ -35,11 +35,6 @@ class TestIntentRoute:
 
     def test_route_with_extra_state_fields(self):
         """Test routing works with extra state fields."""
-        state = {
-            "intent": "transaction",
-            "phone": "3001234567",
-            "amount": 50000,
-            "messages": []
-        }
+        state = {"intent": "transaction", "phone": "3001234567", "amount": 50000, "messages": []}
         result = intent_route(state)
         assert result == "transaction"

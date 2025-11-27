@@ -625,15 +625,36 @@ uv sync
 uv pip list
 ```
 
-### Pre-commit Hooks (Opcional)
+### Calidad de Código
+
+El proyecto usa **ruff**, **mypy** y **bandit** para mantener calidad:
 
 ```bash
-# Instalar pre-commit
+# Ruff - Linter & Formatter
+uv run ruff check apps/ --fix         # Auto-fix linting
+uv run ruff format apps/               # Format código
+
+# MyPy - Type Checking
+uv run mypy apps/                      # Check types
+
+# Bandit - Security Scan
+uv run bandit -r apps/                 # Security check
+```
+
+### Pre-commit Hooks
+
+Hooks automáticos para validar código antes de commit:
+
+```bash
+# Instalar (solo primera vez)
 uv run pre-commit install
 
-# Ejecutar manualmente
-uv run pre-commit run --all-files
+# Probar hooks
+./scripts/test-precommit.sh           # Script automatizado
+uv run pre-commit run --all-files     # Manual
 ```
+
+**Ver**: [PRE-COMMIT_QUICKSTART.md](PRE-COMMIT_QUICKSTART.md) y [docs/CODE_QUALITY.md](docs/CODE_QUALITY.md)
 
 ### Variables de Entorno Completas
 

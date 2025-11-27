@@ -3,7 +3,7 @@
 This entity represents a financial transaction in the system with complete business logic.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Self
 from uuid import UUID, uuid4
@@ -76,7 +76,7 @@ class Transaction(BaseModel):
 
     # Timestamps
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp",
     )
     completed_at: datetime | None = Field(None, description="Completion timestamp")
@@ -169,7 +169,7 @@ class Transaction(BaseModel):
 
         self.status = TransactionStatus.COMPLETED
         self.external_transaction_id = external_id
-        self.completed_at = completed_at or datetime.utcnow()
+        self.completed_at = completed_at or datetime.now(UTC)
         self.error_message = None
 
         return self
@@ -190,7 +190,7 @@ class Transaction(BaseModel):
 
         self.status = TransactionStatus.FAILED
         self.error_message = error_message
-        self.completed_at = failed_at or datetime.utcnow()
+        self.completed_at = failed_at or datetime.now(UTC)
 
         return self
 
@@ -217,7 +217,7 @@ class Transaction(BaseModel):
 
         self.status = TransactionStatus.CANCELLED
         self.error_message = f"Cancelled: {reason}"
-        self.completed_at = cancelled_at or datetime.utcnow()
+        self.completed_at = cancelled_at or datetime.now(UTC)
 
         return self
 

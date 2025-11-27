@@ -5,12 +5,12 @@ tables as required by the technical test requirements.
 """
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import structlog
 from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from apps.orchestrator.infrastructure.persistence.models import (
     ConversationORM,
@@ -34,9 +34,7 @@ class PersistenceService:
         self.engine = create_engine(sync_url, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
 
-    def get_or_create_conversation(
-        self, conversation_id: str, user_id: str
-    ) -> UUID:
+    def get_or_create_conversation(self, conversation_id: str, user_id: str) -> UUID:
         """Get existing conversation or create new one.
 
         Args:
@@ -65,7 +63,7 @@ class PersistenceService:
                 id=uuid4(),
                 user_id=user_id,
                 status="active",
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(UTC),
             )
             session.add(conversation)
             session.commit()
@@ -103,7 +101,7 @@ class PersistenceService:
                 role=role,
                 content=content,
                 message_metadata=json.dumps(metadata) if metadata else None,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             )
             session.add(message)
             session.commit()
@@ -155,8 +153,8 @@ class PersistenceService:
                 status=status,
                 validation_id=validation_id,
                 error_message=error_message,
-                created_at=datetime.utcnow(),
-                completed_at=datetime.utcnow() if status == "completed" else None,
+                created_at=datetime.now(UTC),
+                completed_at=datetime.now(UTC) if status == "completed" else None,
             )
             session.add(transaction)
             session.commit()

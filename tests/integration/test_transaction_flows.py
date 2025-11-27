@@ -1,7 +1,8 @@
 """Integration tests for transaction flows - Success and Error scenarios."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock
 from httpx import AsyncClient
 from langchain_core.messages import AIMessage
 
@@ -11,9 +12,9 @@ from langchain_core.messages import AIMessage
 class TestSuccessfulTransactionFlows:
     """Tests for successful transaction execution flows."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_single_message_complete_transaction(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -44,7 +45,7 @@ class TestSuccessfulTransactionFlows:
         # Execute
         response = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Enviar 50000 pesos al 3001234567", "user_id": "user-001"}
+            json={"message": "Enviar 50000 pesos al 3001234567", "user_id": "user-001"},
         )
 
         # Assert
@@ -54,9 +55,9 @@ class TestSuccessfulTransactionFlows:
         assert "completada" in data["response"].lower()
         mock_persistence.save_transaction.assert_called_once()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_multi_turn_conversation_with_confirmation(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -80,8 +81,7 @@ class TestSuccessfulTransactionFlows:
         mock_get_agent.return_value = mock_agent
 
         r1 = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Quiero enviar dinero", "user_id": "user-002"}
+            "/api/v1/chat", json={"message": "Quiero enviar dinero", "user_id": "user-002"}
         )
         conv_id = r1.json()["conversation_id"]
 
@@ -95,7 +95,11 @@ class TestSuccessfulTransactionFlows:
 
         r2 = await async_client.post(
             "/api/v1/chat",
-            json={"message": "3009876543 y enviar 75000", "conversation_id": conv_id, "user_id": "user-002"}
+            json={
+                "message": "3009876543 y enviar 75000",
+                "conversation_id": conv_id,
+                "user_id": "user-002",
+            },
         )
         assert r2.json()["requires_confirmation"] is True
 
@@ -112,7 +116,7 @@ class TestSuccessfulTransactionFlows:
 
         r3 = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Sí, confirmo", "conversation_id": conv_id, "user_id": "user-002"}
+            json={"message": "Sí, confirmo", "conversation_id": conv_id, "user_id": "user-002"},
         )
         assert r3.json()["transaction_id"] == "TXN-XYZ789"
 
@@ -122,9 +126,9 @@ class TestSuccessfulTransactionFlows:
 class TestTransactionValidationErrors:
     """Tests for validation errors and business rule violations."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_invalid_phone_number_format(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -148,16 +152,15 @@ class TestTransactionValidationErrors:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Enviar al 123456", "user_id": "user-003"}
+            "/api/v1/chat", json={"message": "Enviar al 123456", "user_id": "user-003"}
         )
 
         assert response.status_code == 200
         assert response.json()["metadata"].get("phone") is None
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_negative_or_zero_amount(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -180,8 +183,7 @@ class TestTransactionValidationErrors:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Enviar 0 pesos al 3001234567", "user_id": "user-004"}
+            "/api/v1/chat", json={"message": "Enviar 0 pesos al 3001234567", "user_id": "user-004"}
         )
 
         assert response.status_code == 200
@@ -192,9 +194,9 @@ class TestTransactionValidationErrors:
 class TestUserCancellationFlows:
     """Tests for user-initiated cancellation scenarios."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_user_cancels_before_confirmation(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -218,12 +220,13 @@ class TestUserCancellationFlows:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "No, cancela", "user_id": "user-005"}
+            "/api/v1/chat", json={"message": "No, cancela", "user_id": "user-005"}
         )
 
         assert response.status_code == 200
-        assert "transaction_id" not in response.json() or response.json().get("transaction_id") is None
+        assert (
+            "transaction_id" not in response.json() or response.json().get("transaction_id") is None
+        )
 
 
 @pytest.mark.integration
@@ -231,8 +234,8 @@ class TestUserCancellationFlows:
 class TestSystemErrorHandling:
     """Tests for system error and resilience scenarios."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
     async def test_llm_service_unavailable(
         self, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -248,16 +251,15 @@ class TestSystemErrorHandling:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Test", "user_id": "user-006"}
+            "/api/v1/chat", json={"message": "Test", "user_id": "user-006"}
         )
 
         assert response.status_code == 500
         assert "error" in response.json()["detail"].lower()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_database_persistence_fails(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -280,8 +282,7 @@ class TestSystemErrorHandling:
         mock_persistence.get_or_create_conversation.side_effect = Exception("DB connection lost")
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Hola", "user_id": "user-007"}
+            "/api/v1/chat", json={"message": "Hola", "user_id": "user-007"}
         )
 
         # Should still return agent response
@@ -294,40 +295,38 @@ class TestSystemErrorHandling:
 class TestEdgeCasesAndBoundaryConditions:
     """Tests for edge cases and boundary conditions."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_empty_message(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
         """Test: User sends empty message - should return validation error."""
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "", "user_id": "user-008"}
+            "/api/v1/chat", json={"message": "", "user_id": "user-008"}
         )
 
         # Empty message should fail validation (min_length=1)
         assert response.status_code == 422
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_extremely_long_message(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
         """Test: User sends very long message - should return validation error."""
         long_message = "A" * 10000
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": long_message, "user_id": "user-009"}
+            "/api/v1/chat", json={"message": long_message, "user_id": "user-009"}
         )
 
         # Message exceeds max_length=1000, should fail validation
         assert response.status_code == 422
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_special_characters_and_emojis(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -351,7 +350,7 @@ class TestEdgeCasesAndBoundaryConditions:
 
         response = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Enviar $50,000 al (300) 123-4567 💰🎉", "user_id": "user-010"}
+            json={"message": "Enviar $50,000 al (300) 123-4567 💰🎉", "user_id": "user-010"},
         )
 
         assert response.status_code == 200

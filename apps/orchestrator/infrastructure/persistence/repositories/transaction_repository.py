@@ -4,8 +4,8 @@ Provides data access methods for Transaction entities following the
 Repository pattern for clean separation of concerns.
 """
 
-from datetime import datetime
-from typing import Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import Select, desc, func, select
@@ -208,7 +208,7 @@ class TransactionRepository:
         orm_transaction.validation_id = transaction.validation_id
         orm_transaction.error_message = transaction.error_message
         orm_transaction.completed_at = transaction.completed_at
-        orm_transaction.updated_at = datetime.utcnow()
+        orm_transaction.updated_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_transaction)
@@ -253,14 +253,14 @@ class TransactionRepository:
 
         orm_transaction.status = status.value
         orm_transaction.error_message = error_message
-        orm_transaction.updated_at = datetime.utcnow()
+        orm_transaction.updated_at = datetime.now(UTC)
 
         if status in {
             TransactionStatus.COMPLETED,
             TransactionStatus.FAILED,
             TransactionStatus.CANCELLED,
         }:
-            orm_transaction.completed_at = datetime.utcnow()
+            orm_transaction.completed_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_transaction)

@@ -19,6 +19,12 @@ from tenacity import (
     wait_exponential,
 )
 
+from apps.orchestrator.infrastructure.clients.models import (
+    ExecutionResponse,
+    StatusResponse,
+    ValidationResponse,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,11 +84,11 @@ class TransactionAPIClient:
         await self.client.aclose()
         logger.info("TransactionAPIClient closed")
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "TransactionAPIClient":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: type, exc_val: Exception, exc_tb: object) -> None:
         """Async context manager exit."""
         await self.close()
 
@@ -118,9 +124,7 @@ class TransactionAPIClient:
         try:
             response = await self.client.request(method, endpoint, **kwargs)
             response.raise_for_status()
-            logger.debug(
-                f"Request successful: {method} {endpoint} -> {response.status_code}"
-            )
+            logger.debug(f"Request successful: {method} {endpoint} -> {response.status_code}")
             return response
         except httpx.TimeoutException as e:
             logger.warning(f"Request timeout: {method} {endpoint} - {str(e)}")
@@ -129,10 +133,7 @@ class TransactionAPIClient:
             logger.warning(f"Network error: {method} {endpoint} - {str(e)}")
             raise
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"HTTP error: {method} {endpoint} - "
-                f"{e.response.status_code} - {str(e)}"
-            )
+            logger.error(f"HTTP error: {method} {endpoint} - {e.response.status_code} - {str(e)}")
             raise
 
     async def validate_transaction(
@@ -156,9 +157,7 @@ class TransactionAPIClient:
             httpx.HTTPStatusError: HTTP error from service
             httpx.TimeoutException: Request timed out
         """
-        logger.info(
-            f"Validating transaction: phone={recipient_phone}, amount={amount}"
-        )
+        logger.info(f"Validating transaction: phone={recipient_phone}, amount={amount}")
 
         try:
             # Circuit breaker wraps the HTTP call
@@ -172,20 +171,18 @@ class TransactionAPIClient:
                 },
             )
 
-            data = response.json()
+            validation_response = ValidationResponse(**response.json())
             logger.info(
-                f"Transaction validated: is_valid={data['is_valid']}, "
-                f"validation_id={data.get('validation_id')}"
+                f"Transaction validated: is_valid={validation_response.is_valid}, "
+                f"validation_id={validation_response.validation_id}"
             )
-            return data
+            return validation_response.model_dump()
 
         except CircuitBreakerError as e:
             logger.error(f"Circuit breaker open: {str(e)}")
             raise
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"Validation failed with HTTP error: {e.response.status_code}"
-            )
+            logger.error(f"Validation failed with HTTP error: {e.response.status_code}")
             raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             logger.error(f"Validation failed: {str(e)}")
@@ -231,20 +228,18 @@ class TransactionAPIClient:
                 },
             )
 
-            data = response.json()
+            execution_response = ExecutionResponse(**response.json())
             logger.info(
-                f"Transaction executed: transaction_id={data['transaction_id']}, "
-                f"status={data['status']}"
+                f"Transaction executed: transaction_id={execution_response.transaction_id}, "
+                f"status={execution_response.status}"
             )
-            return data
+            return execution_response.model_dump()
 
         except CircuitBreakerError as e:
             logger.error(f"Circuit breaker open: {str(e)}")
             raise
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"Execution failed with HTTP error: {e.response.status_code}"
-            )
+            logger.error(f"Execution failed with HTTP error: {e.response.status_code}")
             raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             logger.error(f"Execution failed: {str(e)}")
@@ -275,12 +270,12 @@ class TransactionAPIClient:
                 f"/api/v1/transactions/{transaction_id}",
             )
 
-            data = response.json()
+            status_response = StatusResponse(**response.json())
             logger.info(
                 f"Transaction status retrieved: transaction_id={transaction_id}, "
-                f"status={data['status']}"
+                f"status={status_response.status}"
             )
-            return data
+            return status_response.model_dump()
 
         except CircuitBreakerError as e:
             logger.error(f"Circuit breaker open: {str(e)}")
@@ -289,9 +284,7 @@ class TransactionAPIClient:
             if e.response.status_code == 404:
                 logger.warning(f"Transaction not found: {transaction_id}")
             else:
-                logger.error(
-                    f"Status check failed with HTTP error: {e.response.status_code}"
-                )
+                logger.error(f"Status check failed with HTTP error: {e.response.status_code}")
             raise
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             logger.error(f"Status check failed: {str(e)}")

@@ -1,0 +1,93 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+default_language_version:
+  python: python3.12
+
+repos:
+  # Ruff - Ultra-fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        types_or: [python, pyi]
+        exclude: ^(scripts/|mock_api/|tests/|alembic/)
+      # Run the formatter
+      - id: ruff-format
+        types_or: [python, pyi]
+        exclude: ^(scripts/|mock_api/|tests/|alembic/)
+
+  # MyPy - Static type checker (warnings only, won't block commit)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - pydantic>=2.9.0
+          - pydantic-settings>=2.5.0
+        args: [
+          --config-file=pyproject.toml,
+          --ignore-missing-imports,
+          --show-error-codes,
+          --no-strict-optional,
+          --allow-untyped-calls,
+          --allow-untyped-defs,
+        ]
+        exclude: ^(tests/|alembic/|scripts/|mock_api/)
+        verbose: true
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Prevent giant files from being committed
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      # Check YAML files
+      - id: check-yaml
+        args: [--unsafe]
+      # Check TOML files
+      - id: check-toml
+      # Check JSON files
+      - id: check-json
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+      # Fix mixed line endings
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      # Detect private keys
+      - id: detect-private-key
+        exclude: ^(.env.ci.example|.env.example)$
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^(tests/|mock_api/|scripts/)
+
+# Configuration
+fail_fast: false  # Continue running hooks even if one fails
+
+ci:
+  autofix_commit_msg: |
+    🤖 [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '🤖 [pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [mypy]  # Skip mypy in CI (too strict for now)
+  submodules: false

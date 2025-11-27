@@ -1,9 +1,11 @@
 """Unit tests for exception handlers."""
 
 import pytest
-from fastapi import FastAPI, HTTPException as FastAPIHTTPException
+from fastapi import FastAPI
+from fastapi import HTTPException as FastAPIHTTPException
 from fastapi.testclient import TestClient
 
+from apps.orchestrator.api.exception_handlers.handlers import register_exception_handlers
 from apps.orchestrator.core.exceptions import (
     AppException,
     ExternalServiceError,
@@ -11,7 +13,6 @@ from apps.orchestrator.core.exceptions import (
     NotFoundError,
 )
 from apps.orchestrator.domain.exceptions.base import DomainException
-from apps.orchestrator.api.exception_handlers.handlers import register_exception_handlers
 
 
 @pytest.fixture
@@ -146,8 +147,9 @@ class TestExceptionHandlers:
 
         for endpoint, expected_status in test_cases:
             response = client.get(endpoint)
-            assert response.status_code == expected_status, \
-                f"{endpoint} returned {response.status_code}, expected {expected_status}"
+            assert (
+                response.status_code == expected_status
+            ), f"{endpoint} returned {response.status_code}, expected {expected_status}"
 
     def test_exception_handler_preserves_details(self, client):
         """Test exception handlers preserve details dict."""

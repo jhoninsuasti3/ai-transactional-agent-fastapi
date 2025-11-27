@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Conversation schemas for API v1."""
 
 from datetime import datetime

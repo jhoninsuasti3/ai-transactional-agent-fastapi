@@ -5,6 +5,10 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+# Import settings and models at the top
+from apps.orchestrator.infrastructure.persistence.models import Base
+from apps.orchestrator.settings import settings
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -13,9 +17,6 @@ config = context.config
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-# Import settings to get DATABASE_URL
-from apps.orchestrator.settings import settings
 
 # Set database URL from settings
 database_url = settings.DATABASE_URL
@@ -26,11 +27,6 @@ if database_url:
     else:
         sync_url = database_url
     config.set_main_option("sqlalchemy.url", sync_url)
-
-# Import all models to ensure they are registered with SQLAlchemy
-# This must be done AFTER importing settings to avoid circular imports
-import apps.orchestrator.infrastructure.persistence.models
-from apps.orchestrator.infrastructure.persistence.models import Base
 
 target_metadata = Base.metadata
 

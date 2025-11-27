@@ -4,7 +4,7 @@ Defines the state machine graph with nodes and conditional routing.
 """
 
 import structlog
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 
 from apps.agents.transactional.nodes import (
     confirmation_node,
@@ -27,7 +27,7 @@ def should_extract(state: TransactionalState) -> str:
         phone=state.get("phone"),
         amount=state.get("amount"),
         needs_confirmation=state.get("needs_confirmation"),
-        message_count=len(state.get("messages", []))
+        message_count=len(state.get("messages", [])),
     )
 
     # If we already have both phone and amount, go validate
@@ -60,15 +60,20 @@ def should_extract(state: TransactionalState) -> str:
         logger.info("should_extract_decision", decision="END", reason="no_user_message")
         return END
 
-    last_user_msg_lower = last_user_msg.lower()
+    last_user_msg.lower()
 
     # Check if message contains numbers (phone or amount)
-    has_phone_pattern = bool(re.search(r'\b3\d{9}\b', last_user_msg))
-    has_amount_pattern = bool(re.search(r'\$?\d+', last_user_msg))
+    has_phone_pattern = bool(re.search(r"\b3\d{9}\b", last_user_msg))
+    has_amount_pattern = bool(re.search(r"\$?\d+", last_user_msg))
 
     # Only go to extract if we have actual data to extract (numbers)
     if has_phone_pattern or has_amount_pattern:
-        logger.info("should_extract_decision", decision="extract", reason="found_data_pattern", msg=last_user_msg[:50])
+        logger.info(
+            "should_extract_decision",
+            decision="extract",
+            reason="found_data_pattern",
+            msg=last_user_msg[:50],
+        )
         return "extract"
 
     # No data to extract - just end this turn
@@ -78,11 +83,7 @@ def should_extract(state: TransactionalState) -> str:
 
 def should_validate(state: TransactionalState) -> str:
     """Route after extraction: validate if we have data, else END (let user provide more info)."""
-    logger.info(
-        "should_validate_called",
-        phone=state.get("phone"),
-        amount=state.get("amount")
-    )
+    logger.info("should_validate_called", phone=state.get("phone"), amount=state.get("amount"))
 
     if state.get("phone") and state.get("amount"):
         logger.info("should_validate_decision", decision="validate")
@@ -138,7 +139,7 @@ def create_graph(checkpointer=None):
             "extract": "extract",
             "validate": "validate",
             END: END,
-        }
+        },
     )
 
     graph.add_conditional_edges(
@@ -147,7 +148,7 @@ def create_graph(checkpointer=None):
         {
             "validate": "validate",
             END: END,
-        }
+        },
     )
 
     graph.add_conditional_edges(
@@ -156,7 +157,7 @@ def create_graph(checkpointer=None):
         {
             "confirmation": "confirmation",
             END: END,
-        }
+        },
     )
 
     graph.add_conditional_edges(
@@ -165,7 +166,7 @@ def create_graph(checkpointer=None):
         {
             "transaction": "transaction",
             END: END,
-        }
+        },
     )
 
     # Transaction is terminal

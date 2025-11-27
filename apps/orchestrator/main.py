@@ -3,22 +3,22 @@
 Main application setup with middleware, exception handlers, and routes.
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import AsyncGenerator
+from datetime import UTC, datetime
 
+import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import structlog
 
 from apps.apps.core.config import settings
 from apps.apps.core.exceptions import (
-    AppException,
-    HTTPException,
-    NotFoundError,
+    AppError,
     ExternalServiceError,
+    HTTPError,
+    NotFoundError,
 )
 from apps.apps.core.logging import setup_logging
 from apps.apps.infrastructure.persistence.database import close_db
@@ -29,7 +29,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events.
 
     Handles startup and shutdown events.
@@ -74,8 +74,8 @@ app.add_middleware(
 # Exception Handlers
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+@app.exception_handler(HTTPError)
+async def http_exception_handler(request: Request, exc: HTTPError) -> JSONResponse:
     """Handle custom HTTP exceptions.
 
     Args:
@@ -98,7 +98,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         content={
             "error": exc.message,
             "details": exc.details,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
@@ -129,7 +129,7 @@ async def not_found_exception_handler(
         content={
             "error": exc.message,
             "details": exc.details,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
@@ -161,13 +161,13 @@ async def external_service_exception_handler(
             "error": "External service temporarily unavailable",
             "message": exc.message,
             "details": exc.details,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
 
-@app.exception_handler(AppException)
-async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+@app.exception_handler(AppError)
+async def app_exception_handler(request: Request, exc: AppError) -> JSONResponse:
     """Handle general application exceptions.
 
     Args:
@@ -190,7 +190,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             "error": "Internal server error",
             "message": exc.message if settings.is_development else "An error occurred",
             "details": exc.details if settings.is_development else {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
@@ -220,7 +220,7 @@ async def validation_exception_handler(
         content={
             "error": "Validation error",
             "details": exc.errors(),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
@@ -247,7 +247,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         content={
             "error": "Internal server error",
             "message": str(exc) if settings.is_development else "An unexpected error occurred",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
@@ -267,7 +267,7 @@ async def health_check() -> dict:
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 

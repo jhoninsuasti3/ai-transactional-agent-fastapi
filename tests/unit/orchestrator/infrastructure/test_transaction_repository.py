@@ -1,15 +1,16 @@
 """Unit tests for TransactionRepository."""
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
-from apps.orchestrator.domain.entities import Transaction, TransactionStatus, Currency
+import pytest
+
+from apps.orchestrator.domain.entities import Currency, Transaction, TransactionStatus
+from apps.orchestrator.infrastructure.persistence.models import TransactionORM
 from apps.orchestrator.infrastructure.persistence.repositories.transaction_repository import (
     TransactionRepository,
 )
-from apps.orchestrator.infrastructure.persistence.models import TransactionORM
 
 
 @pytest.mark.unit
@@ -31,15 +32,12 @@ class TestTransactionRepository:
     def sample_transaction(self):
         """Create sample Transaction entity."""
         txn = Transaction(
-            user_id="user-123",
-            recipient_phone="3001234567",
-            amount=50000.0,
-            currency=Currency.COP
+            user_id="user-123", recipient_phone="3001234567", amount=50000.0, currency=Currency.COP
         )
         # Manually set currency and status as enum objects (not strings)
         # since use_enum_values might convert them
-        object.__setattr__(txn, 'currency', Currency.COP)
-        object.__setattr__(txn, 'status', TransactionStatus.PENDING)
+        object.__setattr__(txn, "currency", Currency.COP)
+        object.__setattr__(txn, "status", TransactionStatus.PENDING)
         return txn
 
     @pytest.fixture
@@ -228,11 +226,7 @@ class TestTransactionRepository:
         mock_result.scalar_one_or_none.return_value = sample_orm
         mock_session.execute.return_value = mock_result
 
-        updated = await repo.update_status(
-            sample_orm.id,
-            TransactionStatus.COMPLETED,
-            None
-        )
+        updated = await repo.update_status(sample_orm.id, TransactionStatus.COMPLETED, None)
 
         assert isinstance(updated, Transaction)
         mock_session.flush.assert_called_once()
@@ -248,9 +242,7 @@ class TestTransactionRepository:
         mock_session.execute.return_value = mock_result
 
         updated = await repo.update_status(
-            sample_orm.id,
-            TransactionStatus.FAILED,
-            "Insufficient funds"
+            sample_orm.id, TransactionStatus.FAILED, "Insufficient funds"
         )
 
         assert isinstance(updated, Transaction)
@@ -317,10 +309,7 @@ class TestTransactionRepository:
         start_date = datetime.utcnow() - timedelta(days=7)
         end_date = datetime.utcnow()
 
-        transactions = await repo.list_by_filters(
-            start_date=start_date,
-            end_date=end_date
-        )
+        transactions = await repo.list_by_filters(start_date=start_date, end_date=end_date)
 
         assert len(transactions) == 1
 

@@ -4,15 +4,15 @@ import pytest
 
 from apps.orchestrator.core.exceptions import (
     AppException,
-    DomainException,
-    ValidationError,
-    BusinessRuleViolation,
-    InfrastructureException,
-    ExternalServiceError,
-    TransactionValidationError,
-    DatabaseError,
     ApplicationException,
+    BusinessRuleViolation,
+    DatabaseError,
+    DomainException,
+    ExternalServiceError,
+    InfrastructureException,
     NotFoundError,
+    TransactionValidationError,
+    ValidationError,
 )
 
 
@@ -63,8 +63,7 @@ class TestDomainExceptions:
     def test_business_rule_violation(self):
         """Test BusinessRuleViolation."""
         exc = BusinessRuleViolation(
-            "Cannot send more than daily limit",
-            details={"limit": 1000000, "attempted": 2000000}
+            "Cannot send more than daily limit", details={"limit": 1000000, "attempted": 2000000}
         )
         assert isinstance(exc, DomainException)
         assert exc.message == "Cannot send more than daily limit"
@@ -84,8 +83,7 @@ class TestInfrastructureExceptions:
     def test_external_service_error(self):
         """Test ExternalServiceError."""
         exc = ExternalServiceError(
-            "Payment service unavailable",
-            details={"service": "payment", "status_code": 503}
+            "Payment service unavailable", details={"service": "payment", "status_code": 503}
         )
         assert isinstance(exc, InfrastructureException)
         assert exc.message == "Payment service unavailable"
@@ -95,8 +93,7 @@ class TestInfrastructureExceptions:
     def test_transaction_validation_error(self):
         """Test TransactionValidationError."""
         exc = TransactionValidationError(
-            "Insufficient funds",
-            details={"balance": 10000, "amount": 50000}
+            "Insufficient funds", details={"balance": 10000, "amount": 50000}
         )
         assert isinstance(exc, InfrastructureException)
         assert exc.message == "Insufficient funds"
@@ -104,8 +101,7 @@ class TestInfrastructureExceptions:
     def test_database_error(self):
         """Test DatabaseError."""
         exc = DatabaseError(
-            "Connection timeout",
-            details={"operation": "insert", "table": "transactions"}
+            "Connection timeout", details={"operation": "insert", "table": "transactions"}
         )
         assert isinstance(exc, InfrastructureException)
         assert exc.message == "Connection timeout"

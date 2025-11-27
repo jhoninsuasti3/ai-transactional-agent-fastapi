@@ -22,10 +22,7 @@ CONVERSACIÓN:
 
 Extrae los datos y devuélvelos en formato estructurado."""
 
-EXTRACTION_PROMPT = PromptTemplate.from_template(
-    EXTRACTION_SYSTEM_PROMPT,
-    template_format="jinja2"
-)
+EXTRACTION_PROMPT = PromptTemplate.from_template(EXTRACTION_SYSTEM_PROMPT, template_format="jinja2")
 
 # Schema para structured output
 EXTRACTION_SCHEMA = {
@@ -34,15 +31,15 @@ EXTRACTION_SCHEMA = {
         "phone": {
             "type": ["string", "null"],
             "description": "Número de celular de 10 dígitos",
-            "pattern": "^[0-9]{10}$"
+            "pattern": "^[0-9]{10}$",
         },
         "amount": {
             "type": ["number", "null"],
             "description": "Monto a enviar (solo número, sin símbolos)",
-            "minimum": 0
-        }
+            "minimum": 0,
+        },
     },
-    "required": ["phone", "amount"]
+    "required": ["phone", "amount"],
 }
 
 

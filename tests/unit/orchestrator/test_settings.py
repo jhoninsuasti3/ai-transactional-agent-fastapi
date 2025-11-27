@@ -1,7 +1,6 @@
 """Unit tests for orchestrator settings."""
 
 import pytest
-from pydantic import ValidationError
 
 from apps.orchestrator.settings import Settings
 

@@ -29,9 +29,7 @@ class ValidateResponse(BaseModel):
 
     is_valid: bool = Field(..., description="Whether transaction can be processed")
     message: str = Field(..., description="Validation message")
-    validation_id: str | None = Field(
-        None, description="Validation ID if successful"
-    )
+    validation_id: str | None = Field(None, description="Validation ID if successful")
 
 
 class ExecuteRequest(BaseModel):
@@ -62,7 +60,5 @@ class TransactionDetail(BaseModel):
     amount: float = Field(..., description="Transaction amount")
     currency: str = Field(..., description="Currency code")
     created_at: datetime = Field(..., description="Transaction creation timestamp")
-    completed_at: datetime | None = Field(
-        None, description="Transaction completion timestamp"
-    )
+    completed_at: datetime | None = Field(None, description="Transaction completion timestamp")
     error_message: str | None = Field(None, description="Error message if failed")

@@ -22,8 +22,7 @@ INSTRUCCIONES:
 Genera el mensaje:"""
 
 VALIDATION_RESPONSE = PromptTemplate.from_template(
-    VALIDATION_RESPONSE_PROMPT,
-    template_format="jinja2"
+    VALIDATION_RESPONSE_PROMPT, template_format="jinja2"
 )
 
 
@@ -41,5 +40,4 @@ def get_validation_response(valid: bool, phone: str, amount: float, message: str
     """
     if valid:
         return f"✅ Validación exitosa\n\nTeléfono: {phone}\nMonto: ${amount:,.0f} COP\n\n{message}\n\n¿Confirmas esta transacción? (Responde 'sí' para confirmar)"
-    else:
-        return f"❌ No se puede procesar la transacción\n\nTeléfono: {phone}\nMonto: ${amount:,.0f} COP\n\nMotivo: {message}"
+    return f"❌ No se puede procesar la transacción\n\nTeléfono: {phone}\nMonto: ${amount:,.0f} COP\n\nMotivo: {message}"

@@ -27,17 +27,14 @@ def conversation_node(state: TransactionalState) -> dict:
         amount=state.get("amount"),
         needs_confirmation=state.get("needs_confirmation"),
         confirmed=state.get("confirmed"),
-        message_count=len(state.get("messages", []))
+        message_count=len(state.get("messages", [])),
     )
 
     # Get LLM without tools (purely conversational)
     llm = get_llm()
 
     # Build prompt with current state
-    prompt = get_conversation_prompt(
-        phone=state.get("phone"),
-        amount=state.get("amount")
-    )
+    prompt = get_conversation_prompt(phone=state.get("phone"), amount=state.get("amount"))
 
     # Invoke LLM
     messages = [prompt] + state.get("messages", [])
@@ -45,7 +42,7 @@ def conversation_node(state: TransactionalState) -> dict:
 
     logger.info(
         "conversation_node_complete",
-        response_length=len(response.content) if response.content else 0
+        response_length=len(response.content) if response.content else 0,
     )
 
     return {"messages": [response]}

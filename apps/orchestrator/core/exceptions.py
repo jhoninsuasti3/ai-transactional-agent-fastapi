@@ -3,8 +3,17 @@
 These exceptions are used throughout the domain and application layers.
 """
 
+from apps.orchestrator.core.constants import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_INTERNAL_ERROR,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_SERVICE_UNAVAILABLE,
+)
+from apps.orchestrator.core.messages import HTTPMessages
 
-class AppException(Exception):
+
+class AppError(Exception):
     """Base exception for all application exceptions."""
 
     def __init__(self, message: str, details: dict | None = None):
@@ -22,19 +31,19 @@ class AppException(Exception):
 # Domain Exceptions
 
 
-class DomainException(AppException):
+class DomainError(AppError):
     """Base exception for domain layer errors."""
 
     pass
 
 
-class ValidationError(DomainException):
+class ValidationError(DomainError):
     """Validation error in domain models."""
 
     pass
 
 
-class BusinessRuleViolation(DomainException):
+class BusinessRuleViolationError(DomainError):
     """Business rule was violated."""
 
     pass
@@ -43,25 +52,25 @@ class BusinessRuleViolation(DomainException):
 # Infrastructure Exceptions
 
 
-class InfrastructureException(AppException):
+class InfrastructureError(AppError):
     """Base exception for infrastructure layer errors."""
 
     pass
 
 
-class ExternalServiceError(InfrastructureException):
+class ExternalServiceError(InfrastructureError):
     """External service is unavailable or returned an error."""
 
     pass
 
 
-class TransactionValidationError(InfrastructureException):
+class TransactionValidationError(InfrastructureError):
     """Transaction validation failed."""
 
     pass
 
 
-class DatabaseError(InfrastructureException):
+class DatabaseError(InfrastructureError):
     """Database operation failed."""
 
     pass
@@ -70,33 +79,33 @@ class DatabaseError(InfrastructureException):
 # Application Exceptions
 
 
-class ApplicationException(AppException):
+class ApplicationError(AppError):
     """Base exception for application layer errors."""
 
     pass
 
 
-class NotFoundError(ApplicationException):
+class NotFoundError(ApplicationError):
     """Requested resource was not found."""
 
     def __init__(self, resource: str, identifier: str | int):
         """Initialize not found error.
 
         Args:
-            resource: Type of resource (e.g., "Conversation", "Transaction")
+            resource: Type of resource (e.g., ResourceNames.CONVERSATION, ResourceNames.TRANSACTION)
             identifier: Resource identifier
         """
         message = f"{resource} with id '{identifier}' not found"
         super().__init__(message, {"resource": resource, "identifier": str(identifier)})
 
 
-class ConflictError(ApplicationException):
+class ConflictError(ApplicationError):
     """Operation conflicts with current state."""
 
     pass
 
 
-class UnauthorizedError(ApplicationException):
+class UnauthorizedError(ApplicationError):
     """User is not authorized to perform this operation."""
 
     pass
@@ -105,25 +114,25 @@ class UnauthorizedError(ApplicationException):
 # Agent Exceptions
 
 
-class AgentException(AppException):
+class AgentError(AppError):
     """Base exception for LangGraph agent errors."""
 
     pass
 
 
-class AgentExecutionError(AgentException):
+class AgentExecutionError(AgentError):
     """Agent execution failed."""
 
     pass
 
 
-class AgentStateError(AgentException):
+class AgentStateError(AgentError):
     """Agent state is invalid or corrupted."""
 
     pass
 
 
-class ToolExecutionError(AgentException):
+class ToolExecutionError(AgentError):
     """Agent tool execution failed."""
 
     pass
@@ -132,7 +141,7 @@ class ToolExecutionError(AgentException):
 # HTTP Exceptions (for API layer)
 
 
-class HTTPException(AppException):
+class HTTPError(AppError):
     """Base HTTP exception."""
 
     def __init__(self, status_code: int, message: str, details: dict | None = None):
@@ -147,49 +156,49 @@ class HTTPException(AppException):
         self.status_code = status_code
 
 
-class BadRequestError(HTTPException):
+class BadRequestError(HTTPError):
     """400 Bad Request."""
 
-    def __init__(self, message: str = "Bad request", details: dict | None = None):
+    def __init__(self, message: str = HTTPMessages.BAD_REQUEST, details: dict | None = None):
         """Initialize 400 error."""
-        super().__init__(400, message, details)
+        super().__init__(HTTP_STATUS_BAD_REQUEST, message, details)
 
 
-class NotFoundHTTPError(HTTPException):
+class NotFoundHTTPError(HTTPError):
     """404 Not Found."""
 
-    def __init__(self, message: str = "Not found", details: dict | None = None):
+    def __init__(self, message: str = HTTPMessages.NOT_FOUND, details: dict | None = None):
         """Initialize 404 error."""
-        super().__init__(404, message, details)
+        super().__init__(HTTP_STATUS_NOT_FOUND, message, details)
 
 
-class ConflictHTTPError(HTTPException):
+class ConflictHTTPError(HTTPError):
     """409 Conflict."""
 
-    def __init__(self, message: str = "Conflict", details: dict | None = None):
+    def __init__(self, message: str = HTTPMessages.CONFLICT, details: dict | None = None):
         """Initialize 409 error."""
-        super().__init__(409, message, details)
+        super().__init__(HTTP_STATUS_CONFLICT, message, details)
 
 
-class InternalServerError(HTTPException):
+class InternalServerError(HTTPError):
     """500 Internal Server Error."""
 
     def __init__(
         self,
-        message: str = "Internal server error",
+        message: str = HTTPMessages.INTERNAL_ERROR,
         details: dict | None = None,
     ):
         """Initialize 500 error."""
-        super().__init__(500, message, details)
+        super().__init__(HTTP_STATUS_INTERNAL_ERROR, message, details)
 
 
-class ServiceUnavailableError(HTTPException):
+class ServiceUnavailableError(HTTPError):
     """503 Service Unavailable."""
 
     def __init__(
         self,
-        message: str = "Service temporarily unavailable",
+        message: str = HTTPMessages.SERVICE_UNAVAILABLE,
         details: dict | None = None,
     ):
         """Initialize 503 error."""
-        super().__init__(503, message, details)
+        super().__init__(HTTP_STATUS_SERVICE_UNAVAILABLE, message, details)

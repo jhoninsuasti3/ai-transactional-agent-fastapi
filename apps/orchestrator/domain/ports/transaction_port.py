@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from apps.apps.domain.models import TransactionValidation, TransactionExecution
+from apps.apps.domain.models import TransactionExecution, TransactionValidation
 
 
 class TransactionPort(ABC):

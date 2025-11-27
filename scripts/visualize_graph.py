@@ -1,4 +1,5 @@
 """Script para visualizar el grafo del agente transaccional."""
+
 from apps.agents.transactional.graph import agent
 
 # Generar imagen PNG del grafo
@@ -9,7 +10,7 @@ try:
 except Exception as e:
     print(f"❌ Error generando grafo: {e}")
     print("\nIntentando exportar como Mermaid text...")
-    
+
     # Plan B: Exportar como texto Mermaid
     mermaid = agent.get_graph().draw_mermaid()
     with open("agent_graph.mmd", "w") as f:

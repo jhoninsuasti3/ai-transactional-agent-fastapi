@@ -11,9 +11,7 @@ class BaseResponse(BaseModel):
 
     success: bool = Field(..., description="Whether the request was successful")
     message: str | None = Field(None, description="Optional message")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
-    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 
 
 class ErrorDetail(BaseModel):
@@ -36,12 +34,8 @@ class HealthResponse(BaseModel):
 
     status: str = Field(..., description="Service status")
     version: str = Field(..., description="API version")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Check timestamp"
-    )
-    components: dict[str, str] | None = Field(
-        None, description="Status of individual components"
-    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
+    components: dict[str, str] | None = Field(None, description="Status of individual components")
 
 
 class PaginationParams(BaseModel):

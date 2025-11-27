@@ -64,7 +64,6 @@ def random_transaction_status() -> str:
     rand = random.random()
     if rand < 0.7:
         return "completed"
-    elif rand < 0.9:
+    if rand < 0.9:
         return "pending"
-    else:
-        return "failed"
+    return "failed"

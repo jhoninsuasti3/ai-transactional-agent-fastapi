@@ -1,9 +1,9 @@
 """Unit tests for Conversation and Message domain entities."""
 
-import pytest
 from datetime import datetime
 from uuid import uuid4
-from pydantic import ValidationError
+
+import pytest
 
 from apps.orchestrator.domain.entities.conversation import Conversation, ConversationStatus
 from apps.orchestrator.domain.entities.message import Message, MessageRole
@@ -16,11 +16,7 @@ class TestMessageEntity:
     def test_create_user_message(self):
         """Test creating a user message."""
         conv_id = uuid4()
-        msg = Message(
-            conversation_id=conv_id,
-            role=MessageRole.USER,
-            content="Hello"
-        )
+        msg = Message(conversation_id=conv_id, role=MessageRole.USER, content="Hello")
         assert msg.conversation_id == conv_id
         assert msg.role == MessageRole.USER
         assert msg.content == "Hello"
@@ -33,7 +29,7 @@ class TestMessageEntity:
         msg = Message(
             conversation_id=conv_id,
             role="assistant",  # Use string
-            content="Hi there!"
+            content="Hi there!",
         )
         assert msg.is_from_assistant() is True
         assert msg.is_from_user() is False
@@ -41,20 +37,12 @@ class TestMessageEntity:
     def test_create_system_message(self):
         """Test creating a system message."""
         conv_id = uuid4()
-        msg = Message(
-            conversation_id=conv_id,
-            role="system",
-            content="System notification"
-        )
+        msg = Message(conversation_id=conv_id, role="system", content="System notification")
         assert msg.is_system_message() is True
 
     def test_add_metadata(self):
         """Test adding metadata to message."""
-        msg = Message(
-            conversation_id=uuid4(),
-            role="user",
-            content="Test"
-        )
+        msg = Message(conversation_id=uuid4(), role="user", content="Test")
         msg.add_metadata("intent", "greeting")
         msg.add_metadata("confidence", 0.95)
 
@@ -63,11 +51,7 @@ class TestMessageEntity:
 
     def test_get_metadata(self):
         """Test getting metadata from message."""
-        msg = Message(
-            conversation_id=uuid4(),
-            role="user",
-            content="Test"
-        )
+        msg = Message(conversation_id=uuid4(), role="user", content="Test")
         msg.add_metadata("key1", "value1")
 
         assert msg.get_metadata("key1") == "value1"
@@ -76,20 +60,12 @@ class TestMessageEntity:
 
     def test_excerpt_short_message(self):
         """Test excerpt for short message."""
-        msg = Message(
-            conversation_id=uuid4(),
-            role="user",
-            content="Short"
-        )
+        msg = Message(conversation_id=uuid4(), role="user", content="Short")
         assert msg.excerpt() == "Short"
 
     def test_excerpt_long_message(self):
         """Test excerpt truncates long message."""
-        msg = Message(
-            conversation_id=uuid4(),
-            role="user",
-            content="A" * 100
-        )
+        msg = Message(conversation_id=uuid4(), role="user", content="A" * 100)
         excerpt = msg.excerpt(max_length=50)
         assert len(excerpt) == 50
         assert excerpt.endswith("...")
@@ -123,11 +99,7 @@ class TestConversationEntity:
     def test_add_message_to_active_conversation(self):
         """Test adding message to active conversation."""
         conv = Conversation(user_id="user-123")
-        msg = Message(
-            conversation_id=conv.id,
-            role="user",
-            content="Hello"
-        )
+        msg = Message(conversation_id=conv.id, role="user", content="Hello")
         conv.add_message(msg)
         assert len(conv.messages) == 1
         assert conv.messages[0] == msg
@@ -137,11 +109,7 @@ class TestConversationEntity:
         conv = Conversation(user_id="user-123")
         conv.complete()
 
-        msg = Message(
-            conversation_id=conv.id,
-            role="user",
-            content="Hello"
-        )
+        msg = Message(conversation_id=conv.id, role="user", content="Hello")
 
         with pytest.raises(ValueError) as exc_info:
             conv.add_message(msg)
@@ -153,7 +121,7 @@ class TestConversationEntity:
         msg = Message(
             conversation_id=uuid4(),  # Different ID
             role="user",
-            content="Hello"
+            content="Hello",
         )
 
         with pytest.raises(ValueError) as exc_info:

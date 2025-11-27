@@ -5,9 +5,9 @@ Queries the status of a transaction using the Mock Transaction API.
 
 from typing import Annotated
 
+import structlog
 from langchain_core.tools import tool
 from pydantic import Field
-import structlog
 
 from apps.agents.transactional.tools.http_client import transaction_client
 
@@ -16,7 +16,7 @@ logger = structlog.get_logger(__name__)
 
 @tool
 def get_transaction_status_tool(
-    transaction_id: Annotated[str, Field(description="Transaction ID to query")]
+    transaction_id: Annotated[str, Field(description="Transaction ID to query")],
 ) -> dict:
     """Consulta el estado de una transacción previamente ejecutada.
 
@@ -53,26 +53,19 @@ def get_transaction_status_tool(
             'error': 'Transacción no encontrada'
         }
     """
-    logger.info(
-        "querying_transaction_status",
-        transaction_id=transaction_id
-    )
+    logger.info("querying_transaction_status", transaction_id=transaction_id)
 
     if not transaction_id:
-        return {
-            "error": "Se requiere un transaction_id válido"
-        }
+        return {"error": "Se requiere un transaction_id válido"}
 
     # Llamar al Mock API
     try:
-        response = transaction_client.get(
-            f"/api/v1/transactions/{transaction_id}"
-        )
+        response = transaction_client.get(f"/api/v1/transactions/{transaction_id}")
 
         logger.info(
             "transaction_status_retrieved",
             transaction_id=transaction_id,
-            status=response.get("status")
+            status=response.get("status"),
         )
 
         return {
@@ -86,12 +79,6 @@ def get_transaction_status_tool(
         }
 
     except Exception as e:
-        logger.error(
-            "status_query_failed",
-            transaction_id=transaction_id,
-            error=str(e)
-        )
+        logger.error("status_query_failed", transaction_id=transaction_id, error=str(e))
 
-        return {
-            "error": f"Error al consultar estado: {str(e)}"
-        }
+        return {"error": f"Error al consultar estado: {str(e)}"}

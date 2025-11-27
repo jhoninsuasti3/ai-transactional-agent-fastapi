@@ -1,10 +1,10 @@
 """Integration tests for health endpoints."""
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from apps.orchestrator.api.health.router import health_router
-from fastapi import FastAPI
 
 
 @pytest.fixture

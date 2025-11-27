@@ -5,8 +5,9 @@ the Repository pattern for clean separation of concerns.
 """
 
 import json
-from datetime import datetime
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, desc, select
@@ -207,7 +208,7 @@ class ConversationRepository:
         orm_conversation.agent_state = (
             json.dumps(conversation.agent_state) if conversation.agent_state else None
         )
-        orm_conversation.updated_at = datetime.utcnow()
+        orm_conversation.updated_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_conversation)
@@ -248,10 +249,10 @@ class ConversationRepository:
             raise ValueError(msg)
 
         orm_conversation.status = status.value
-        orm_conversation.updated_at = datetime.utcnow()
+        orm_conversation.updated_at = datetime.now(UTC)
 
         if status in {ConversationStatus.COMPLETED, ConversationStatus.ABANDONED}:
-            orm_conversation.ended_at = datetime.utcnow()
+            orm_conversation.ended_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_conversation)
@@ -290,7 +291,7 @@ class ConversationRepository:
             raise ValueError(msg)
 
         orm_conversation.agent_state = json.dumps(agent_state)
-        orm_conversation.updated_at = datetime.utcnow()
+        orm_conversation.updated_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_conversation)
@@ -345,13 +346,13 @@ class ConversationRepository:
             role=role.value,
             content=content,
             message_metadata=json.dumps(metadata) if metadata else None,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         self.session.add(orm_message)
 
         # Update conversation timestamp
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(UTC)
 
         await self.session.flush()
         await self.session.refresh(orm_message)

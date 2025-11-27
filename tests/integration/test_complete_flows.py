@@ -1,9 +1,10 @@
 """Integration tests for complete transaction flows - Happy and Unhappy Paths."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock, AsyncMock
 from httpx import AsyncClient
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage
 
 
 @pytest.mark.integration
@@ -11,9 +12,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 class TestHappyPaths:
     """Integration tests for successful transaction flows."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_complete_transaction_flow_single_message(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -46,10 +47,7 @@ class TestHappyPaths:
         # Execute
         response = await async_client.post(
             "/api/v1/chat",
-            json={
-                "message": "Enviar 50000 pesos al 3001234567",
-                "user_id": "test-user"
-            }
+            json={"message": "Enviar 50000 pesos al 3001234567", "user_id": "test-user"},
         )
 
         # Assert
@@ -63,9 +61,9 @@ class TestHappyPaths:
         mock_persistence.save_transaction.assert_called_once()
         mock_persistence.update_conversation_status.assert_called_once()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_multi_step_transaction_flow(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -90,8 +88,7 @@ class TestHappyPaths:
         mock_get_agent.return_value = mock_agent
 
         response1 = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Quiero enviar dinero", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Quiero enviar dinero", "user_id": "test-user"}
         )
         assert response1.status_code == 200
         conv_id = response1.json()["conversation_id"]
@@ -105,7 +102,7 @@ class TestHappyPaths:
 
         response2 = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Al 3009876543", "conversation_id": conv_id, "user_id": "test-user"}
+            json={"message": "Al 3009876543", "conversation_id": conv_id, "user_id": "test-user"},
         )
         assert response2.status_code == 200
 
@@ -119,7 +116,7 @@ class TestHappyPaths:
 
         response3 = await async_client.post(
             "/api/v1/chat",
-            json={"message": "75000 pesos", "conversation_id": conv_id, "user_id": "test-user"}
+            json={"message": "75000 pesos", "conversation_id": conv_id, "user_id": "test-user"},
         )
         assert response3.status_code == 200
         assert response3.json()["requires_confirmation"] is True
@@ -137,7 +134,7 @@ class TestHappyPaths:
 
         response4 = await async_client.post(
             "/api/v1/chat",
-            json={"message": "Sí, confirmo", "conversation_id": conv_id, "user_id": "test-user"}
+            json={"message": "Sí, confirmo", "conversation_id": conv_id, "user_id": "test-user"},
         )
         assert response4.status_code == 200
         assert response4.json()["transaction_id"] == "TXN-XYZ789"
@@ -148,8 +145,8 @@ class TestHappyPaths:
 class TestUnhappyPaths:
     """Integration tests for error scenarios and edge cases."""
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
     async def test_agent_raises_exception(
         self, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -167,16 +164,15 @@ class TestUnhappyPaths:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Test", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Test", "user_id": "test-user"}
         )
 
         assert response.status_code == 500
         assert "error" in response.json()["detail"].lower()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_persistence_fails_gracefully(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -198,20 +194,21 @@ class TestUnhappyPaths:
         mock_get_agent.return_value = mock_agent
 
         # Persistence fails
-        mock_persistence.get_or_create_conversation.side_effect = Exception("Database connection error")
+        mock_persistence.get_or_create_conversation.side_effect = Exception(
+            "Database connection error"
+        )
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Hola", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Hola", "user_id": "test-user"}
         )
 
         # Should still return 200 with agent response (persistence error is logged but not raised)
         assert response.status_code == 200
         assert "respuesta del agente" in response.json()["response"].lower()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_user_cancels_transaction(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -238,8 +235,7 @@ class TestUnhappyPaths:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "No, cancela", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "No, cancela", "user_id": "test-user"}
         )
 
         assert response.status_code == 200
@@ -247,9 +243,9 @@ class TestUnhappyPaths:
         assert "transaction_id" not in data or data.get("transaction_id") is None
         assert "cancel" in data["response"].lower()
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_invalid_phone_number_handling(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -274,48 +270,45 @@ class TestUnhappyPaths:
         mock_get_agent.return_value = mock_agent
 
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "Enviar al 123", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "Enviar al 123", "user_id": "test-user"}
         )
 
         assert response.status_code == 200
         data = response.json()
         assert data["metadata"].get("phone") is None
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_empty_message_handling(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
         """Test handling of empty message - EDGE CASE."""
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": "", "user_id": "test-user"}
+            "/api/v1/chat", json={"message": "", "user_id": "test-user"}
         )
 
         # Empty message should fail validation (min_length=1)
         assert response.status_code == 422
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_very_long_message_handling(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
         """Test handling of very long message - EDGE CASE."""
         long_message = "A" * 10000
         response = await async_client.post(
-            "/api/v1/chat",
-            json={"message": long_message, "user_id": "test-user"}
+            "/api/v1/chat", json={"message": long_message, "user_id": "test-user"}
         )
 
         # Message exceeds max_length=1000, should fail validation
         assert response.status_code == 422
 
-    @patch('apps.orchestrator.v1.routers.chat.PostgresSaver')
-    @patch('apps.orchestrator.v1.routers.chat.get_agent')
-    @patch('apps.orchestrator.v1.routers.chat.persistence_service')
+    @patch("apps.orchestrator.v1.routers.chat.PostgresSaver")
+    @patch("apps.orchestrator.v1.routers.chat.get_agent")
+    @patch("apps.orchestrator.v1.routers.chat.persistence_service")
     async def test_special_characters_in_message(
         self, mock_persistence, mock_get_agent, mock_checkpointer, async_client: AsyncClient
     ):
@@ -342,8 +335,8 @@ class TestUnhappyPaths:
             "/api/v1/chat",
             json={
                 "message": "Enviar $50,000 al (300) 123-4567 por favor! 💰",
-                "user_id": "test-user"
-            }
+                "user_id": "test-user",
+            },
         )
 
         # Should extract despite special formatting

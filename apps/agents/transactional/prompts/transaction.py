@@ -19,17 +19,12 @@ INSTRUCCIONES:
 Mensaje:"""
 
 TRANSACTION_RESULT = PromptTemplate.from_template(
-    TRANSACTION_RESULT_PROMPT,
-    template_format="jinja2"
+    TRANSACTION_RESULT_PROMPT, template_format="jinja2"
 )
 
 
 def get_transaction_result_message(
-    success: bool,
-    phone: str,
-    amount: float,
-    transaction_id: str | None = None,
-    message: str = ""
+    success: bool, phone: str, amount: float, transaction_id: str | None = None, message: str = ""
 ) -> str:
     """Generate transaction result message.
 
@@ -45,5 +40,4 @@ def get_transaction_result_message(
     """
     if success:
         return f"✅ Transacción completada exitosamente\n\nID: {transaction_id}\nDestino: {phone}\nMonto: ${amount:,.0f} COP\n\n{message}"
-    else:
-        return f"❌ La transacción no pudo completarse\n\nDestino: {phone}\nMonto: ${amount:,.0f} COP\n\nMotivo: {message}\n\nPor favor, intenta nuevamente o contacta soporte."
+    return f"❌ La transacción no pudo completarse\n\nDestino: {phone}\nMonto: ${amount:,.0f} COP\n\nMotivo: {message}\n\nPor favor, intenta nuevamente o contacta soporte."

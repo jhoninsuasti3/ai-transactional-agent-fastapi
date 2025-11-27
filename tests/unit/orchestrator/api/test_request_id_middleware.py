@@ -1,10 +1,10 @@
 """Unit tests for request ID middleware."""
 
+import uuid
+
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from unittest.mock import patch
-import uuid
 
 from apps.orchestrator.api.middlewares.request_id import RequestIDMiddleware
 

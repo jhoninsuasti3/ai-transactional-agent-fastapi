@@ -29,9 +29,7 @@ def validator_node(state: TransactionalState) -> dict:
     if not phone or not amount:
         logger.warning("validator_node_missing_data", phone=phone, amount=amount)
         return {
-            "messages": [
-                AIMessage(content="Error: Faltan datos (teléfono o monto) para validar.")
-            ],
+            "messages": [AIMessage(content="Error: Faltan datos (teléfono o monto) para validar.")],
             "needs_confirmation": False,
         }
 
@@ -56,16 +54,13 @@ def validator_node(state: TransactionalState) -> dict:
             "needs_confirmation": True,
             "messages": [AIMessage(content=message)],
         }
-    else:
-        # Validation failed
-        error = result.get("error", "Error desconocido")
-        message = get_validation_response(
-            valid=False, phone=phone, amount=amount, message=error
-        )
+    # Validation failed
+    error = result.get("error", "Error desconocido")
+    message = get_validation_response(valid=False, phone=phone, amount=amount, message=error)
 
-        logger.warning("validator_node_failed", error=error, phone=phone, amount=amount)
+    logger.warning("validator_node_failed", error=error, phone=phone, amount=amount)
 
-        return {
-            "needs_confirmation": False,
-            "messages": [AIMessage(content=message)],
-        }
+    return {
+        "needs_confirmation": False,
+        "messages": [AIMessage(content=message)],
+    }

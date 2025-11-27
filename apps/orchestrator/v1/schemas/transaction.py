@@ -45,9 +45,7 @@ class TransactionResponse(BaseModel):
     amount: float = Field(..., description="Transaction amount")
     currency: str = Field(..., description="Currency code")
     created_at: datetime = Field(..., description="Transaction creation timestamp")
-    completed_at: datetime | None = Field(
-        None, description="Transaction completion timestamp"
-    )
+    completed_at: datetime | None = Field(None, description="Transaction completion timestamp")
     error_message: str | None = Field(None, description="Error message if failed")
 
     class Config:
@@ -77,8 +75,6 @@ class TransactionDetail(BaseModel):
     amount: float = Field(..., description="Transaction amount")
     currency: str = Field(..., description="Currency code")
     created_at: datetime = Field(..., description="Transaction creation timestamp")
-    completed_at: datetime | None = Field(
-        None, description="Transaction completion timestamp"
-    )
+    completed_at: datetime | None = Field(None, description="Transaction completion timestamp")
     error_message: str | None = Field(None, description="Error message if failed")
     metadata: dict | None = Field(None, description="Additional metadata")

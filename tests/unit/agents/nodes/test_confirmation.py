@@ -1,7 +1,7 @@
 """Unit tests for confirmation node."""
 
 import pytest
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from apps.agents.transactional.nodes.confirmation import confirmation_node
 from apps.agents.transactional.state import TransactionalState
@@ -17,7 +17,7 @@ class TestConfirmationNode:
             "messages": [
                 HumanMessage(content="Quiero enviar dinero"),
                 AIMessage(content="Confirmas?"),
-                HumanMessage(content="Sí, confirmo")
+                HumanMessage(content="Sí, confirmo"),
             ],
             "phone": None,
             "amount": None,
@@ -33,9 +33,7 @@ class TestConfirmationNode:
     def test_confirmation_with_ok(self):
         """Test confirmation with 'ok' keyword."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="Ok, adelante")
-            ],
+            "messages": [HumanMessage(content="Ok, adelante")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -50,9 +48,7 @@ class TestConfirmationNode:
     def test_confirmation_with_dale(self):
         """Test confirmation with 'dale' keyword."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="Dale, confirmo")
-            ],
+            "messages": [HumanMessage(content="Dale, confirmo")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -67,9 +63,7 @@ class TestConfirmationNode:
     def test_cancellation_with_no(self):
         """Test cancellation with 'no' keyword."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="No, mejor no")
-            ],
+            "messages": [HumanMessage(content="No, mejor no")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -85,9 +79,7 @@ class TestConfirmationNode:
     def test_cancellation_with_cancelar(self):
         """Test cancellation with 'cancelar' keyword."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="Quiero cancelar")
-            ],
+            "messages": [HumanMessage(content="Quiero cancelar")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -103,9 +95,7 @@ class TestConfirmationNode:
     def test_no_confirmation_keyword(self):
         """Test message without confirmation keyword."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="Cuéntame más")
-            ],
+            "messages": [HumanMessage(content="Cuéntame más")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -135,10 +125,7 @@ class TestConfirmationNode:
     def test_only_ai_messages(self):
         """Test with only AI messages (no human messages)."""
         state: TransactionalState = {
-            "messages": [
-                AIMessage(content="Hola"),
-                AIMessage(content="¿Confirmas?")
-            ],
+            "messages": [AIMessage(content="Hola"), AIMessage(content="¿Confirmas?")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,
@@ -156,7 +143,7 @@ class TestConfirmationNode:
             "messages": [
                 HumanMessage(content="Sí"),
                 AIMessage(content="Confirmación recibida"),
-                HumanMessage(content="No, espera, cancelar")
+                HumanMessage(content="No, espera, cancelar"),
             ],
             "phone": None,
             "amount": None,
@@ -173,9 +160,7 @@ class TestConfirmationNode:
     def test_case_insensitive_keywords(self):
         """Test that keywords are case insensitive."""
         state: TransactionalState = {
-            "messages": [
-                HumanMessage(content="SI, CONFIRMO")
-            ],
+            "messages": [HumanMessage(content="SI, CONFIRMO")],
             "phone": None,
             "amount": None,
             "needs_confirmation": True,

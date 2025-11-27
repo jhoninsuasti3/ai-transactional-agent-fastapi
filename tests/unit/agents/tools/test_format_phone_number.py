@@ -78,7 +78,27 @@ class TestFormatPhoneNumberTool:
 
     def test_mobile_numbers_common_prefixes(self):
         """Test common Colombian mobile prefixes."""
-        prefixes = ["300", "301", "302", "310", "311", "312", "313", "314", "315", "316", "317", "318", "319", "320", "321", "322", "323", "350", "351"]
+        prefixes = [
+            "300",
+            "301",
+            "302",
+            "310",
+            "311",
+            "312",
+            "313",
+            "314",
+            "315",
+            "316",
+            "317",
+            "318",
+            "319",
+            "320",
+            "321",
+            "322",
+            "323",
+            "350",
+            "351",
+        ]
 
         for prefix in prefixes:
             result = format_phone_number_tool.invoke({"phone": f"{prefix}1234567"})

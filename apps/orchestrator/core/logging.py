@@ -8,12 +8,13 @@ import sys
 from typing import Any
 
 import structlog
+from structlog.stdlib import BoundLogger
 from structlog.types import EventDict, Processor
 
-from apps.apps.core.config import settings
+from apps.orchestrator.settings import settings
 
 
-def add_app_context(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
+def add_app_context(_logger: Any, _method_name: str, event_dict: EventDict) -> EventDict:
     """Add application context to all log entries.
 
     Args:
@@ -100,7 +101,7 @@ def setup_logging() -> None:
     logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
-def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str | None = None) -> BoundLogger:
     """Get a structured logger instance.
 
     Args:

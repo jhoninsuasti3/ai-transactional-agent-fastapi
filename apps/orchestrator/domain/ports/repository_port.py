@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from apps.apps.domain.models import Conversation, Transaction, ConversationStatus
+from apps.apps.domain.models import Conversation, ConversationStatus, Transaction
 
 
 class ConversationRepository(ABC):

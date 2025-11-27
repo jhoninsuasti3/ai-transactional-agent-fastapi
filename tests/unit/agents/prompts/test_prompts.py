@@ -4,9 +4,9 @@ import pytest
 from langchain_core.messages import SystemMessage
 
 from apps.agents.transactional.prompts.conversation import get_conversation_prompt
+from apps.agents.transactional.prompts.extractor import get_extraction_prompt
 from apps.agents.transactional.prompts.transaction import get_transaction_result_message
 from apps.agents.transactional.prompts.validator import get_validation_response
-from apps.agents.transactional.prompts.extractor import get_extraction_prompt
 
 
 @pytest.mark.unit
@@ -58,7 +58,7 @@ class TestTransactionResultMessage:
             phone="3001234567",
             amount=50000,
             transaction_id="TXN-12345",
-            message="Completed"
+            message="Completed",
         )
         assert "✅" in message
         assert "TXN-12345" in message
@@ -69,10 +69,7 @@ class TestTransactionResultMessage:
     def test_failed_transaction_message(self):
         """Test failed transaction message."""
         message = get_transaction_result_message(
-            success=False,
-            phone="3001234567",
-            amount=50000,
-            message="Insufficient funds"
+            success=False, phone="3001234567", amount=50000, message="Insufficient funds"
         )
         assert "❌" in message
         assert "3001234567" in message
@@ -83,10 +80,7 @@ class TestTransactionResultMessage:
     def test_successful_transaction_with_large_amount(self):
         """Test successful transaction message with large amount."""
         message = get_transaction_result_message(
-            success=True,
-            phone="3001234567",
-            amount=1000000,
-            transaction_id="TXN-99999"
+            success=True, phone="3001234567", amount=1000000, transaction_id="TXN-99999"
         )
         assert "1,000,000 COP" in message
         assert "TXN-99999" in message
@@ -94,10 +88,7 @@ class TestTransactionResultMessage:
     def test_successful_transaction_without_message(self):
         """Test successful transaction without additional message."""
         message = get_transaction_result_message(
-            success=True,
-            phone="3001234567",
-            amount=50000,
-            transaction_id="TXN-88888"
+            success=True, phone="3001234567", amount=50000, transaction_id="TXN-88888"
         )
         assert "TXN-88888" in message
         assert "exitosamente" in message
@@ -110,10 +101,7 @@ class TestValidationResponse:
     def test_valid_response(self):
         """Test valid validation response."""
         response = get_validation_response(
-            valid=True,
-            phone="3001234567",
-            amount=50000,
-            message="Can proceed"
+            valid=True, phone="3001234567", amount=50000, message="Can proceed"
         )
         assert "3001234567" in response
         assert "50,000 COP" in response
@@ -122,10 +110,7 @@ class TestValidationResponse:
     def test_invalid_response(self):
         """Test invalid validation response."""
         response = get_validation_response(
-            valid=False,
-            phone="3001234567",
-            amount=50000,
-            message="Insufficient funds"
+            valid=False, phone="3001234567", amount=50000, message="Insufficient funds"
         )
         assert "3001234567" in response
         assert "50,000 COP" in response

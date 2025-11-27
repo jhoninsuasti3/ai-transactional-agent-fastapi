@@ -33,16 +33,13 @@ class TestValidationRoute:
             "is_valid": True,
             "validation_id": "VAL-123",
             "phone": "3001234567",
-            "amount": 50000
+            "amount": 50000,
         }
         result = validation_route(state)
         assert result == "valid"
 
     def test_route_with_validation_message(self):
         """Test routing with validation message."""
-        state = {
-            "is_valid": False,
-            "validation_message": "Insufficient funds"
-        }
+        state = {"is_valid": False, "validation_message": "Insufficient funds"}
         result = validation_route(state)
         assert result == "invalid"

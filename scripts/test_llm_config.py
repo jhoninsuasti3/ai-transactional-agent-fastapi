@@ -10,7 +10,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from apps.agents.transactional.config import get_llm, get_conversation_llm
+from apps.agents.transactional.config import get_conversation_llm, get_llm
 from apps.orchestrator.settings import settings
 
 
@@ -19,7 +19,9 @@ def test_current_llm():
     print("=" * 60)
     print("🧪 Testing Current LLM Configuration")
     print("=" * 60)
-    print(f"Provider: {settings.LLM_MODEL.split(':')[0] if ':' in settings.LLM_MODEL else 'openai'}")
+    print(
+        f"Provider: {settings.LLM_MODEL.split(':')[0] if ':' in settings.LLM_MODEL else 'openai'}"
+    )
     print(f"Model: {settings.LLM_MODEL}")
     print(f"Temperature: {settings.LLM_TEMPERATURE}")
     print()

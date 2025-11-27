@@ -5,7 +5,7 @@ Loads configuration from environment variables with validation.
 
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     )
 
     # API
-    API_HOST: str = Field(default="0.0.0.0", description="API host")
+    API_HOST: str = Field(default="0.0.0.0", description="API host")  # noqa: S104
     API_PORT: int = Field(default=8000, description="API port")
     API_WORKERS: int = Field(default=1, description="Number of workers")
 
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     )
 
     # Database
-    DATABASE_URL: PostgresDsn = Field(
+    DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/transactional_agent",
         description="PostgreSQL connection string (async)",
     )
@@ -146,7 +146,7 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = Field(
-        default="your-secret-key-change-in-production",
+        default="your-secret-key-change-in-production",  # noqa: S105
         description="Secret key for JWT and encryption",
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
@@ -162,11 +162,9 @@ class Settings(BaseSettings):
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
-    def validate_database_url(cls, v: str | PostgresDsn) -> str:
+    def validate_database_url(cls, v: str) -> str:
         """Ensure DATABASE_URL is a string."""
-        if isinstance(v, str):
-            return v
-        return str(v)
+        return v if isinstance(v, str) else str(v)
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -202,7 +200,7 @@ settings = Settings()
 # Validation on import
 def validate_settings() -> None:
     """Validate critical settings on startup."""
-    if settings.is_production and settings.SECRET_KEY == "your-secret-key-change-in-production":
+    if settings.is_production and settings.SECRET_KEY == "your-secret-key-change-in-production":  # noqa: S105
         raise ValueError("SECRET_KEY must be changed in production")
 
     if not settings.OPENAI_API_KEY:

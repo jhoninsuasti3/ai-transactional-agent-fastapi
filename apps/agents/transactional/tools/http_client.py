@@ -7,15 +7,17 @@ Implements:
 - Structured logging
 """
 
+from typing import Any
+
+import httpx
 import structlog
+from pybreaker import CircuitBreaker
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
-import httpx
-from pybreaker import CircuitBreaker
 
 from apps.orchestrator.settings import settings
 
@@ -26,20 +28,20 @@ logger = structlog.get_logger(__name__)
 transaction_api_breaker = CircuitBreaker(
     fail_max=settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     reset_timeout=settings.CIRCUIT_BREAKER_RESET_TIMEOUT,
-    name="transaction_api"
+    name="transaction_api",
 )
 
 
 class TransactionAPIClient:
     """Resilient HTTP client for Transaction Mock API."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_url = settings.TRANSACTION_SERVICE_URL
         self.timeout = httpx.Timeout(
             connect=settings.HTTP_TIMEOUT_CONNECT,
             read=settings.HTTP_TIMEOUT_READ,
             write=settings.HTTP_TIMEOUT_CONNECT,
-            pool=5.0
+            pool=5.0,
         )
 
     @retry(
@@ -48,12 +50,7 @@ class TransactionAPIClient:
         retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException)),
         reraise=True,
     )
-    def _make_request(
-        self,
-        method: str,
-        endpoint: str,
-        **kwargs
-    ) -> dict:
+    def _make_request(self, method: str, endpoint: str, **kwargs: Any) -> dict[Any, Any]:
         """Make HTTP request with retry logic.
 
         Args:
@@ -70,41 +67,23 @@ class TransactionAPIClient:
         """
         url = f"{self.base_url}{endpoint}"
 
-        logger.info(
-            "http_request",
-            method=method,
-            url=url,
-            **kwargs
-        )
+        logger.info("http_request", method=method, url=url, **kwargs)
 
         try:
             with httpx.Client(timeout=self.timeout) as client:
                 response = client.request(method, url, **kwargs)
                 response.raise_for_status()
 
-                logger.info(
-                    "http_response",
-                    status_code=response.status_code,
-                    url=url
-                )
+                logger.info("http_response", status_code=response.status_code, url=url)
 
                 return response.json()
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                "http_error",
-                status_code=e.response.status_code,
-                url=url,
-                error=str(e)
-            )
+            logger.error("http_error", status_code=e.response.status_code, url=url, error=str(e))
             raise
 
         except (httpx.RequestError, httpx.TimeoutException) as e:
-            logger.error(
-                "http_request_failed",
-                url=url,
-                error=str(e)
-            )
+            logger.error("http_request_failed", url=url, error=str(e))
             raise
 
     @transaction_api_breaker

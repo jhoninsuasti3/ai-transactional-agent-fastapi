@@ -6,7 +6,12 @@ management for the application using async SQLAlchemy.
 
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 
 from apps.orchestrator.core.config import settings
@@ -20,7 +25,7 @@ engine: AsyncEngine = create_async_engine(
     pool_pre_ping=True,  # Verify connections before using
     pool_recycle=3600,  # Recycle connections after 1 hour
     # Use NullPool for testing to avoid connection pool issues
-    poolclass=NullPool if settings.ENVIRONMENT == "testing" else None,
+    poolclass=NullPool if settings.DEBUG else None,
 )
 
 # Create async session factory

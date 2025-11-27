@@ -1,22 +1,23 @@
 """Unit tests for ConversationRepository."""
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
+import pytest
+
 from apps.orchestrator.domain.entities import (
     Conversation,
-    Message,
     ConversationStatus,
+    Message,
     MessageRole,
-)
-from apps.orchestrator.infrastructure.persistence.repositories.conversation_repository import (
-    ConversationRepository,
 )
 from apps.orchestrator.infrastructure.persistence.models import (
     ConversationORM,
     MessageORM,
+)
+from apps.orchestrator.infrastructure.persistence.repositories.conversation_repository import (
+    ConversationRepository,
 )
 
 
@@ -40,7 +41,7 @@ class TestConversationRepository:
         """Create sample Conversation entity."""
         conv = Conversation(user_id="user-123")
         # Manually set status as enum object
-        object.__setattr__(conv, 'status', ConversationStatus.ACTIVE)
+        object.__setattr__(conv, "status", ConversationStatus.ACTIVE)
         return conv
 
     @pytest.fixture
@@ -77,7 +78,9 @@ class TestConversationRepository:
         assert repo.session == mock_session
 
     @pytest.mark.asyncio
-    async def test_create_conversation(self, mock_session, sample_conversation, sample_conversation_orm):
+    async def test_create_conversation(
+        self, mock_session, sample_conversation, sample_conversation_orm
+    ):
         """Test creating a new conversation."""
         repo = ConversationRepository(mock_session)
 
@@ -174,7 +177,9 @@ class TestConversationRepository:
         mock_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_conversation(self, mock_session, sample_conversation, sample_conversation_orm):
+    async def test_update_conversation(
+        self, mock_session, sample_conversation, sample_conversation_orm
+    ):
         """Test updating an existing conversation."""
         repo = ConversationRepository(mock_session)
 
@@ -213,10 +218,7 @@ class TestConversationRepository:
         mock_result.scalar_one_or_none.return_value = sample_conversation_orm
         mock_session.execute.return_value = mock_result
 
-        updated = await repo.update_status(
-            sample_conversation_orm.id,
-            ConversationStatus.COMPLETED
-        )
+        updated = await repo.update_status(sample_conversation_orm.id, ConversationStatus.COMPLETED)
 
         assert isinstance(updated, Conversation)
         mock_session.flush.assert_called_once()
@@ -283,9 +285,7 @@ class TestConversationRepository:
         mock_session.refresh.side_effect = refresh_side_effect
 
         result = await repo.add_message(
-            sample_conversation_orm.id,
-            MessageRole.USER,
-            "Hello, I want to send money"
+            sample_conversation_orm.id, MessageRole.USER, "Hello, I want to send money"
         )
 
         assert isinstance(result, Message)
@@ -312,7 +312,7 @@ class TestConversationRepository:
             sample_conversation_orm.id,
             MessageRole.ASSISTANT,
             "Sure, I can help with that",
-            metadata={"intent": "transfer"}
+            metadata={"intent": "transfer"},
         )
 
         assert isinstance(result, Message)

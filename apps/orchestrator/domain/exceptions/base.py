@@ -6,7 +6,7 @@ Enterprise-grade exception hierarchy for domain layer.
 from typing import Any
 
 
-class DomainException(Exception):
+class DomainError(Exception):
     """Base exception for all domain errors.
 
     All domain-specific exceptions should inherit from this class.
@@ -24,7 +24,7 @@ class DomainException(Exception):
         super().__init__(self.message)
 
 
-class EntityNotFoundError(DomainException):
+class EntityNotFoundError(DomainError):
     """Raised when an entity is not found."""
 
     def __init__(self, entity_name: str, entity_id: Any):
@@ -39,7 +39,7 @@ class EntityNotFoundError(DomainException):
         super().__init__(message, details)
 
 
-class EntityAlreadyExistsError(DomainException):
+class EntityAlreadyExistsError(DomainError):
     """Raised when trying to create an entity that already exists."""
 
     def __init__(self, entity_name: str, unique_field: str, value: Any):
@@ -59,7 +59,7 @@ class EntityAlreadyExistsError(DomainException):
         super().__init__(message, details)
 
 
-class ValidationError(DomainException):
+class ValidationError(DomainError):
     """Raised when domain validation fails."""
 
     def __init__(self, message: str, field: str | None = None, value: Any = None):
@@ -78,7 +78,7 @@ class ValidationError(DomainException):
         super().__init__(message, details)
 
 
-class BusinessRuleViolation(DomainException):
+class BusinessRuleViolationError(DomainError):
     """Raised when a business rule is violated."""
 
     def __init__(self, rule: str, message: str, context: dict[str, Any] | None = None):
@@ -95,7 +95,7 @@ class BusinessRuleViolation(DomainException):
         super().__init__(message, details)
 
 
-class InvalidStateTransition(DomainException):
+class InvalidStateTransitionError(DomainError):
     """Raised when an invalid state transition is attempted."""
 
     def __init__(self, entity: str, from_state: str, to_state: str):

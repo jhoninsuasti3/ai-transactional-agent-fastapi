@@ -37,7 +37,17 @@ def confirmation_node(state: TransactionalState) -> dict:
     content = last_message.content.lower()
 
     # Check for confirmation keywords
-    confirmation_keywords = ["sí", "si", "confirmo", "confirmar", "ok", "dale", "adelante", "seguro", "yes"]
+    confirmation_keywords = [
+        "sí",
+        "si",
+        "confirmo",
+        "confirmar",
+        "ok",
+        "dale",
+        "adelante",
+        "seguro",
+        "yes",
+    ]
     cancellation_keywords = ["no", "cancelar", "cancela", "detener", "parar", "espera", "cancel"]
 
     is_confirmed = any(keyword in content for keyword in confirmation_keywords)
@@ -47,7 +57,7 @@ def confirmation_node(state: TransactionalState) -> dict:
         "confirmation_node_check",
         content=content[:50],
         is_confirmed=is_confirmed,
-        is_cancelled=is_cancelled
+        is_cancelled=is_cancelled,
     )
 
     if is_cancelled:

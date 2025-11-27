@@ -5,9 +5,10 @@ the insights_backend pattern for enterprise scalability.
 """
 
 import os
-from typing import Literal
 
 from dotenv import load_dotenv
+
+from apps.orchestrator.core.constants import ENV_DEVELOPMENT, ENV_PRODUCTION, ENV_TEST
 
 # Load environment variables from .env file
 load_dotenv(".env")
@@ -19,11 +20,11 @@ class Settings:
     # Application
     APP_NAME: str = os.getenv("APP_NAME", "AI Transactional Agent")
     APP_VERSION: str = os.getenv("APP_VERSION", "1.0.0")
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", ENV_DEVELOPMENT)
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
     # API
-    API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
+    API_HOST: str = os.getenv("API_HOST", "0.0.0.0")  # noqa: S104
     API_PORT: int = int(os.getenv("API_PORT", "8001"))
     API_PREFIX: str = os.getenv("API_PREFIX", "/api")
 
@@ -40,12 +41,12 @@ class Settings:
 
     # Support both individual vars and full DATABASE_URL
     _database_url_env = os.getenv("DATABASE_URL")
-    if _database_url_env and ENVIRONMENT != "test":
-        DATABASE_URL: str = _database_url_env
-    elif ENVIRONMENT == "test":
+    if _database_url_env and ENVIRONMENT != ENV_TEST:
+        DATABASE_URL = _database_url_env
+    elif ENVIRONMENT == ENV_TEST:
         DATABASE_URL = "sqlite:///test.db"
     else:
-        DATABASE_URL: str = f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+        DATABASE_URL = f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 
     DATABASE_ECHO: bool = os.getenv("DATABASE_ECHO", "false").lower() == "true"
     DATABASE_POOL_SIZE: int = int(os.getenv("DATABASE_POOL_SIZE", "10"))
@@ -54,10 +55,10 @@ class Settings:
     # LangGraph Checkpoint Database (psycopg format for LangGraph)
     _langgraph_checkpoint_db = os.getenv("LANGGRAPH_CHECKPOINT_DB")
     if _langgraph_checkpoint_db:
-        LANGGRAPH_CHECKPOINT_DB: str = _langgraph_checkpoint_db
+        LANGGRAPH_CHECKPOINT_DB = _langgraph_checkpoint_db
     else:
         # Use standard PostgreSQL connection string format (not SQLAlchemy format)
-        LANGGRAPH_CHECKPOINT_DB: str = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+        LANGGRAPH_CHECKPOINT_DB = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 
     # LangChain/LangSmith
     LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
@@ -81,7 +82,9 @@ class Settings:
 
     # Resilience Patterns
     MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "3"))
-    CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5"))
+    CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = int(
+        os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5")
+    )
     CIRCUIT_BREAKER_RESET_TIMEOUT: int = int(os.getenv("CIRCUIT_BREAKER_RESET_TIMEOUT", "60"))
 
     # Logging
@@ -110,12 +113,12 @@ class Settings:
     @property
     def is_development(self) -> bool:
         """Check if running in development mode."""
-        return self.ENVIRONMENT == "development"
+        return self.ENVIRONMENT == ENV_DEVELOPMENT
 
     @property
     def is_production(self) -> bool:
         """Check if running in production mode."""
-        return self.ENVIRONMENT == "production"
+        return self.ENVIRONMENT == ENV_PRODUCTION
 
     @property
     def cors_origins_list(self) -> list[str]:

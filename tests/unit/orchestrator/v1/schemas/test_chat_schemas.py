@@ -17,10 +17,7 @@ class TestChatRequest:
 
     def test_valid_chat_request(self):
         """Test valid chat request creation."""
-        request = ChatRequest(
-            message="Hola, quiero enviar dinero",
-            user_id="user-123"
-        )
+        request = ChatRequest(message="Hola, quiero enviar dinero", user_id="user-123")
         assert request.message == "Hola, quiero enviar dinero"
         assert request.user_id == "user-123"
         assert request.conversation_id is None
@@ -28,9 +25,7 @@ class TestChatRequest:
     def test_chat_request_with_conversation_id(self):
         """Test chat request with existing conversation ID."""
         request = ChatRequest(
-            message="Confirmar transacción",
-            conversation_id="conv-456",
-            user_id="user-123"
+            message="Confirmar transacción", conversation_id="conv-456", user_id="user-123"
         )
         assert request.conversation_id == "conv-456"
 
@@ -58,10 +53,7 @@ class TestChatResponse:
 
     def test_valid_chat_response(self):
         """Test valid chat response creation."""
-        response = ChatResponse(
-            response="Hola! En qué puedo ayudarte?",
-            conversation_id="conv-123"
-        )
+        response = ChatResponse(response="Hola! En qué puedo ayudarte?", conversation_id="conv-123")
         assert response.response == "Hola! En qué puedo ayudarte?"
         assert response.conversation_id == "conv-123"
         assert response.transaction_id is None
@@ -74,7 +66,7 @@ class TestChatResponse:
             conversation_id="conv-123",
             transaction_id="TXN-12345",
             requires_confirmation=True,
-            metadata={"amount": 50000, "phone": "3001234567"}
+            metadata={"amount": 50000, "phone": "3001234567"},
         )
         assert response.transaction_id == "TXN-12345"
         assert response.requires_confirmation is True
@@ -87,19 +79,13 @@ class TestConfirmationRequest:
 
     def test_valid_confirmation_request(self):
         """Test valid confirmation request."""
-        request = ConfirmationRequest(
-            conversation_id="conv-123",
-            confirmed=True
-        )
+        request = ConfirmationRequest(conversation_id="conv-123", confirmed=True)
         assert request.conversation_id == "conv-123"
         assert request.confirmed is True
 
     def test_confirmation_rejected(self):
         """Test confirmation rejected."""
-        request = ConfirmationRequest(
-            conversation_id="conv-123",
-            confirmed=False
-        )
+        request = ConfirmationRequest(conversation_id="conv-123", confirmed=False)
         assert request.confirmed is False
 
     def test_missing_fields_fail(self):
@@ -117,16 +103,13 @@ class TestConfirmationResponse:
         response = ConfirmationResponse(
             response="Transacción completada exitosamente",
             transaction_id="TXN-12345",
-            status="completed"
+            status="completed",
         )
         assert response.transaction_id == "TXN-12345"
         assert response.status == "completed"
 
     def test_confirmation_response_failed(self):
         """Test confirmation response with failed status."""
-        response = ConfirmationResponse(
-            response="La transacción falló",
-            status="failed"
-        )
+        response = ConfirmationResponse(response="La transacción falló", status="failed")
         assert response.transaction_id is None
         assert response.status == "failed"

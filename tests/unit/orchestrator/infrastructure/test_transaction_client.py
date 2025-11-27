@@ -1,9 +1,9 @@
 """Unit tests for TransactionAPIClient."""
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
-from pybreaker import CircuitBreakerError
+import pytest
 
 from apps.orchestrator.infrastructure.clients.transaction_client import TransactionAPIClient
 
@@ -16,10 +16,7 @@ class TestTransactionAPIClient:
     async def client(self):
         """Create test client."""
         client = TransactionAPIClient(
-            base_url="http://test-api:8001",
-            connection_timeout=1.0,
-            read_timeout=2.0,
-            max_retries=3
+            base_url="http://test-api:8001", connection_timeout=1.0, read_timeout=2.0, max_retries=3
         )
         yield client
         await client.close()
@@ -33,7 +30,7 @@ class TestTransactionAPIClient:
             read_timeout=10.0,
             max_retries=3,
             circuit_breaker_threshold=5,
-            circuit_breaker_timeout=60
+            circuit_breaker_timeout=60,
         )
 
         assert client.base_url == "http://test-api:8001"
@@ -57,16 +54,13 @@ class TestTransactionAPIClient:
         mock_response.json.return_value = {
             "is_valid": True,
             "validation_id": "VAL-12345",
-            "message": "Can proceed"
+            "message": "Can proceed",
         }
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
-            result = await client.validate_transaction(
-                recipient_phone="3001234567",
-                amount=50000
-            )
+            result = await client.validate_transaction(recipient_phone="3001234567", amount=50000)
 
             assert result["is_valid"] is True
             assert result["validation_id"] == "VAL-12345"
@@ -77,18 +71,12 @@ class TestTransactionAPIClient:
         """Test transaction validation with invalid response."""
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "is_valid": False,
-            "message": "Insufficient funds"
-        }
+        mock_response.json.return_value = {"is_valid": False, "message": "Insufficient funds"}
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
-            result = await client.validate_transaction(
-                recipient_phone="3001234567",
-                amount=1000000
-            )
+            result = await client.validate_transaction(recipient_phone="3001234567", amount=1000000)
 
             assert result["is_valid"] is False
             assert "Insufficient funds" in result["message"]
@@ -99,31 +87,23 @@ class TestTransactionAPIClient:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Server error",
-            request=MagicMock(),
-            response=mock_response
+            "Server error", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             with pytest.raises(httpx.HTTPStatusError):
-                await client.validate_transaction(
-                    recipient_phone="3001234567",
-                    amount=50000
-                )
+                await client.validate_transaction(recipient_phone="3001234567", amount=50000)
 
     @pytest.mark.asyncio
     async def test_validate_transaction_timeout(self, client):
         """Test validation with timeout."""
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.TimeoutException("Timeout")
 
             with pytest.raises(httpx.TimeoutException):
-                await client.validate_transaction(
-                    recipient_phone="3001234567",
-                    amount=50000
-                )
+                await client.validate_transaction(recipient_phone="3001234567", amount=50000)
 
     @pytest.mark.asyncio
     async def test_execute_transaction_success(self, client):
@@ -133,16 +113,14 @@ class TestTransactionAPIClient:
         mock_response.json.return_value = {
             "transaction_id": "TXN-12345",
             "status": "completed",
-            "message": "Transaction completed"
+            "message": "Transaction completed",
         }
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             result = await client.execute_transaction(
-                validation_id="VAL-123",
-                recipient_phone="3001234567",
-                amount=50000
+                validation_id="VAL-123", recipient_phone="3001234567", amount=50000
             )
 
             assert result["transaction_id"] == "TXN-12345"
@@ -156,10 +134,10 @@ class TestTransactionAPIClient:
         mock_response.json.return_value = {
             "transaction_id": "TXN-12345",
             "status": "completed",
-            "amount": 50000
+            "amount": 50000,
         }
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             result = await client.get_transaction_status("TXN-12345")
@@ -170,14 +148,11 @@ class TestTransactionAPIClient:
     @pytest.mark.asyncio
     async def test_network_error_handling(self, client):
         """Test handling of network errors."""
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.NetworkError("Connection failed")
 
             with pytest.raises(httpx.NetworkError):
-                await client.validate_transaction(
-                    recipient_phone="3001234567",
-                    amount=50000
-                )
+                await client.validate_transaction(recipient_phone="3001234567", amount=50000)
 
     @pytest.mark.asyncio
     async def test_make_request_success(self, client):
@@ -186,7 +161,7 @@ class TestTransactionAPIClient:
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             response = await client._make_request("GET", "/test")
@@ -200,12 +175,10 @@ class TestTransactionAPIClient:
         mock_response = MagicMock()
         mock_response.status_code = 404
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Not found",
-            request=MagicMock(),
-            response=mock_response
+            "Not found", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -219,19 +192,15 @@ class TestTransactionAPIClient:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Server error",
-            request=MagicMock(),
-            response=mock_response
+            "Server error", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             with pytest.raises(httpx.HTTPStatusError):
                 await client.execute_transaction(
-                    validation_id="VAL-123",
-                    recipient_phone="3001234567",
-                    amount=50000
+                    validation_id="VAL-123", recipient_phone="3001234567", amount=50000
                 )
 
     @pytest.mark.asyncio
@@ -240,12 +209,10 @@ class TestTransactionAPIClient:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Server error",
-            request=MagicMock(),
-            response=mock_response
+            "Server error", request=MagicMock(), response=mock_response
         )
 
-        with patch.object(client.client, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(client.client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
 
             with pytest.raises(httpx.HTTPStatusError):

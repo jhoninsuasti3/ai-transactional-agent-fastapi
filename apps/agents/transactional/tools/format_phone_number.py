@@ -12,7 +12,7 @@ from pydantic import Field
 
 @tool
 def format_phone_number_tool(
-    phone: Annotated[str, Field(description="Phone number to validate and format")]
+    phone: Annotated[str, Field(description="Phone number to validate and format")],
 ) -> dict:
     """Valida y formatea números de teléfono colombianos.
 
@@ -38,23 +38,17 @@ def format_phone_number_tool(
         {'valid': False, 'error': 'El número debe tener 10 dígitos'}
     """
     # Remover todos los caracteres no numéricos
-    digits_only = re.sub(r'\D', '', phone)
+    digits_only = re.sub(r"\D", "", phone)
 
     # Validar longitud
     if len(digits_only) != 10:
         return {
             "valid": False,
-            "error": f"El número debe tener 10 dígitos. Recibido: {len(digits_only)} dígitos"
+            "error": f"El número debe tener 10 dígitos. Recibido: {len(digits_only)} dígitos",
         }
 
     # Validar que comience con 3 (celulares en Colombia)
-    if not digits_only.startswith('3'):
-        return {
-            "valid": False,
-            "error": "El número debe comenzar con 3 (celulares colombianos)"
-        }
+    if not digits_only.startswith("3"):
+        return {"valid": False, "error": "El número debe comenzar con 3 (celulares colombianos)"}
 
-    return {
-        "valid": True,
-        "formatted_phone": digits_only
-    }
+    return {"valid": True, "formatted_phone": digits_only}

@@ -5,7 +5,7 @@ Uses LangChain's init_chat_model for unified interface.
 """
 
 from enum import Enum
-from typing import Literal
+from typing import Any
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
@@ -38,7 +38,7 @@ def get_llm(
     provider: str | None = None,
     model: str | None = None,
     temperature: float = 0.0,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseChatModel:
     """Get configured LLM instance based on provider.
 
@@ -56,8 +56,14 @@ def get_llm(
         >>> llm = get_llm(provider="anthropic", model="claude-3-5-sonnet")
         >>> llm = get_llm()  # Uses environment config
     """
-    provider = provider or settings.LLM_MODEL.split(":")[0] if ":" in settings.LLM_MODEL else "openai"
-    model = model or settings.LLM_MODEL.split(":")[-1] if ":" in settings.LLM_MODEL else settings.LLM_MODEL
+    provider = (
+        provider or settings.LLM_MODEL.split(":")[0] if ":" in settings.LLM_MODEL else "openai"
+    )
+    model = (
+        model or settings.LLM_MODEL.split(":")[-1]
+        if ":" in settings.LLM_MODEL
+        else settings.LLM_MODEL
+    )
 
     # Build model string for init_chat_model
     model_string = f"{provider}:{model}"
@@ -75,16 +81,14 @@ def get_llm(
         init_kwargs["api_key"] = settings.ANTHROPIC_API_KEY
 
     # Initialize model using LangChain's unified interface
-    llm = init_chat_model(model_string, **init_kwargs)
-
-    return llm
+    return init_chat_model(model_string, **init_kwargs)
 
 
 def get_structured_llm(
     output_schema: type,
     provider: str | None = None,
     model: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseChatModel:
     """Get LLM configured for structured output.
 
@@ -109,9 +113,7 @@ def get_structured_llm(
     llm = get_llm(provider=provider, model=model, **kwargs)
 
     # Bind structured output schema
-    structured_llm = llm.with_structured_output(output_schema)
-
-    return structured_llm
+    return llm.with_structured_output(output_schema)
 
 
 # Presets for common configurations

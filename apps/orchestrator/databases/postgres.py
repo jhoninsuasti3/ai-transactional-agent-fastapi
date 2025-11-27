@@ -6,7 +6,6 @@ async support, and proper lifecycle management.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,

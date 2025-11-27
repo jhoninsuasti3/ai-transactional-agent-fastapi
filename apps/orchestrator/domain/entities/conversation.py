@@ -4,7 +4,7 @@ A conversation represents a complete user session with the agent, including
 all messages and associated transactions.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
@@ -71,16 +71,16 @@ class Conversation(BaseModel):
 
     # Timestamps
     started_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Conversation start time",
     )
     ended_at: datetime | None = Field(None, description="Conversation end time")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Database creation time",
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Database update time",
     )
 
@@ -104,7 +104,7 @@ class Conversation(BaseModel):
             raise ValueError(msg)
 
         self.messages.append(message)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(UTC)
 
     def add_transaction_id(self, transaction_id: UUID) -> None:
         """Associate a transaction with this conversation.
@@ -114,7 +114,7 @@ class Conversation(BaseModel):
         """
         if transaction_id not in self.transaction_ids:
             self.transaction_ids.append(transaction_id)
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(UTC)
 
     def complete(self, ended_at: datetime | None = None) -> None:
         """Mark conversation as completed successfully.
@@ -130,8 +130,8 @@ class Conversation(BaseModel):
             raise ValueError(msg)
 
         self.status = ConversationStatus.COMPLETED
-        self.ended_at = ended_at or datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.ended_at = ended_at or datetime.now(UTC)
+        self.updated_at = datetime.now(UTC)
 
     def abandon(self, ended_at: datetime | None = None) -> None:
         """Mark conversation as abandoned (user left without completing).
@@ -144,8 +144,8 @@ class Conversation(BaseModel):
             raise ValueError(msg)
 
         self.status = ConversationStatus.ABANDONED
-        self.ended_at = ended_at or datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.ended_at = ended_at or datetime.now(UTC)
+        self.updated_at = datetime.now(UTC)
 
     def update_agent_state(self, state: dict[str, Any]) -> None:
         """Update the LangGraph agent state.
@@ -154,7 +154,7 @@ class Conversation(BaseModel):
             state: New state dictionary
         """
         self.agent_state = state
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(UTC)
 
     def is_active(self) -> bool:
         """Check if conversation is active."""

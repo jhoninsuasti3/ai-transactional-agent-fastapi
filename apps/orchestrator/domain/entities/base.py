@@ -3,19 +3,18 @@
 Provides base classes for entities and value objects following DDD principles.
 """
 
-from abc import ABC
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
-class Entity(ABC):
+class Entity:
     """Base class for domain entities.
 
     An entity has a unique identity that persists through changes.
     Two entities are equal if they have the same ID, regardless of their attributes.
     """
 
-    def __init__(self, id: int | None = None) -> None:
+    def __init__(self, id: int | None = None) -> None:  # noqa: A002
         """Initialize entity.
 
         Args:
@@ -60,7 +59,7 @@ class AggregateRoot(Entity):
     All operations on the aggregate must go through the aggregate root.
     """
 
-    def __init__(self, id: int | None = None) -> None:
+    def __init__(self, id: int | None = None) -> None:  # noqa: A002
         """Initialize aggregate root.
 
         Args:
@@ -91,7 +90,7 @@ class AggregateRoot(Entity):
         return self._domain_events.copy()
 
 
-class ValueObject(ABC):
+class ValueObject:
     """Base class for value objects.
 
     A value object has no unique identity. It is defined entirely by its attributes.
@@ -130,7 +129,7 @@ class ValueObject(ABC):
         return f"{self.__class__.__name__}({attrs})"
 
 
-class Auditable(ABC):
+class Auditable:
     """Mixin for entities that need audit timestamps."""
 
     def __init__(self) -> None:
@@ -144,7 +143,7 @@ class Auditable(ABC):
         Args:
             timestamp: Creation timestamp (defaults to now)
         """
-        self.created_at = timestamp or datetime.utcnow()
+        self.created_at = timestamp or datetime.now(UTC)
         self.updated_at = self.created_at
 
     def mark_updated(self, timestamp: datetime | None = None) -> None:
@@ -153,4 +152,4 @@ class Auditable(ABC):
         Args:
             timestamp: Update timestamp (defaults to now)
         """
-        self.updated_at = timestamp or datetime.utcnow()
+        self.updated_at = timestamp or datetime.now(UTC)

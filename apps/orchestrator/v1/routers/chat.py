@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 """Chat router for API v1 - Integrated with LangGraph agent."""
 
 import uuid
-from typing import Dict, Any
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, HTTPException
-from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.postgres import PostgresSaver
 
-from apps.orchestrator.v1.schemas import ChatRequest, ChatResponse
 from apps.agents.transactional.graph import get_agent
-from apps.agents.transactional.state import TransactionalState
-from apps.orchestrator.settings import settings
 from apps.orchestrator.constants import LANGGRAPH_RECURSION_LIMIT
 from apps.orchestrator.services.persistence_service import persistence_service
+from apps.orchestrator.settings import settings
+from apps.orchestrator.v1.schemas import ChatRequest, ChatResponse
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -97,7 +95,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             response_text = "Lo siento, hubo un error."
 
         # Build metadata from agent state
-        metadata: Dict[str, Any] = {
+        metadata: dict[str, Any] = {
             "phone": result.get("phone"),
             "amount": result.get("amount"),
             "needs_confirmation": result.get("needs_confirmation", False),
@@ -143,11 +141,12 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 )
 
                 # Mark conversation as completed
-                from datetime import datetime
+                from datetime import UTC, datetime
+
                 persistence_service.update_conversation_status(
                     conversation_id=conv_uuid,
                     status="completed",
-                    ended_at=datetime.utcnow(),
+                    ended_at=datetime.now(UTC),
                 )
 
             logger.info("data_persisted_to_database", conversation_uuid=str(conv_uuid))
@@ -184,9 +183,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
             exc_info=True,
         )
         raise HTTPException(
-            status_code=500,
-            detail=f"Error processing chat request: {str(e)}"
-        )
+            status_code=500, detail=f"Error processing chat request: {str(e)}"
+        ) from e
 
 
 @router.get("/health")

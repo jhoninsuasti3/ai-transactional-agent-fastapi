@@ -1,9 +1,9 @@
 """Unit tests for TransactionAPIClient HTTP client."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import httpx
-from pybreaker import CircuitBreakerError
+import pytest
 
 from apps.agents.transactional.tools.http_client import TransactionAPIClient, transaction_client
 
@@ -20,7 +20,7 @@ class TestTransactionAPIClient:
         assert client.timeout is not None
         assert isinstance(client.timeout, httpx.Timeout)
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_make_request_success_post(self, mock_client_class):
         """Test successful POST request."""
         mock_response = MagicMock()
@@ -39,12 +39,10 @@ class TestTransactionAPIClient:
 
         assert result == {"result": "success"}
         mock_client_instance.request.assert_called_once_with(
-            "POST",
-            f"{client.base_url}/test",
-            json={"data": "value"}
+            "POST", f"{client.base_url}/test", json={"data": "value"}
         )
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_make_request_success_get(self, mock_client_class):
         """Test successful GET request."""
         mock_response = MagicMock()
@@ -64,15 +62,13 @@ class TestTransactionAPIClient:
         assert result == {"id": "123", "status": "active"}
         mock_client_instance.request.assert_called_once()
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_make_request_http_status_error(self, mock_client_class):
         """Test request with HTTP status error."""
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Server error",
-            request=MagicMock(),
-            response=mock_response
+            "Server error", request=MagicMock(), response=mock_response
         )
 
         mock_client_instance = MagicMock()
@@ -87,7 +83,7 @@ class TestTransactionAPIClient:
         with pytest.raises(httpx.HTTPStatusError):
             client._make_request("POST", "/fail")
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_make_request_timeout(self, mock_client_class):
         """Test request with timeout."""
         mock_client_instance = MagicMock()
@@ -102,7 +98,7 @@ class TestTransactionAPIClient:
         with pytest.raises(httpx.TimeoutException):
             client._make_request("GET", "/slow")
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_make_request_network_error(self, mock_client_class):
         """Test request with network error."""
         mock_client_instance = MagicMock()
@@ -117,7 +113,7 @@ class TestTransactionAPIClient:
         with pytest.raises(httpx.RequestError):
             client._make_request("POST", "/unavailable")
 
-    @patch.object(TransactionAPIClient, '_make_request')
+    @patch.object(TransactionAPIClient, "_make_request")
     def test_post_method(self, mock_make_request):
         """Test post method calls _make_request with correct arguments."""
         mock_make_request.return_value = {"transaction_id": "TXN-123"}
@@ -128,7 +124,7 @@ class TestTransactionAPIClient:
         assert result == {"transaction_id": "TXN-123"}
         mock_make_request.assert_called_once_with("POST", "/transactions", json={"amount": 50000})
 
-    @patch.object(TransactionAPIClient, '_make_request')
+    @patch.object(TransactionAPIClient, "_make_request")
     def test_get_method(self, mock_make_request):
         """Test get method calls _make_request with correct arguments."""
         mock_make_request.return_value = {"status": "completed"}
@@ -144,7 +140,7 @@ class TestTransactionAPIClient:
         assert transaction_client is not None
         assert isinstance(transaction_client, TransactionAPIClient)
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_timeout_configuration(self, mock_client_class):
         """Test that timeout is configured correctly."""
         mock_response = MagicMock()
@@ -164,10 +160,10 @@ class TestTransactionAPIClient:
         # Verify Client was created with timeout
         mock_client_class.assert_called_once()
         call_kwargs = mock_client_class.call_args[1]
-        assert 'timeout' in call_kwargs
-        assert call_kwargs['timeout'] == client.timeout
+        assert "timeout" in call_kwargs
+        assert call_kwargs["timeout"] == client.timeout
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_response_raises_for_status(self, mock_client_class):
         """Test that raise_for_status is called on response."""
         mock_response = MagicMock()
@@ -187,7 +183,7 @@ class TestTransactionAPIClient:
 
         mock_response.raise_for_status.assert_called_once()
 
-    @patch('apps.agents.transactional.tools.http_client.httpx.Client')
+    @patch("apps.agents.transactional.tools.http_client.httpx.Client")
     def test_request_with_json_body(self, mock_client_class):
         """Test request properly passes JSON body."""
         mock_response = MagicMock()

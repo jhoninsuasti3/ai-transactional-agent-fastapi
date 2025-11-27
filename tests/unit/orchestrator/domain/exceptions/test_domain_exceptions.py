@@ -1,15 +1,16 @@
 """Unit tests for domain exceptions."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from apps.orchestrator.domain.exceptions.base import (
-    DomainException,
-    EntityNotFoundError,
-    EntityAlreadyExistsError,
-    ValidationError,
     BusinessRuleViolation,
+    DomainException,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
     InvalidStateTransition,
+    ValidationError,
 )
 
 
@@ -163,11 +164,7 @@ class TestValidationError:
 
     def test_create_validation_error_with_field_and_value(self):
         """Test creating validation error with field and value."""
-        exc = ValidationError(
-            "Amount must be positive",
-            field="amount",
-            value=-100
-        )
+        exc = ValidationError("Amount must be positive", field="amount", value=-100)
 
         assert exc.message == "Amount must be positive"
         assert exc.details["field"] == "amount"
@@ -209,8 +206,7 @@ class TestBusinessRuleViolation:
     def test_create_business_rule_violation_without_context(self):
         """Test creating business rule violation without context."""
         exc = BusinessRuleViolation(
-            "MAX_DAILY_TRANSACTIONS",
-            "User has exceeded maximum daily transactions"
+            "MAX_DAILY_TRANSACTIONS", "User has exceeded maximum daily transactions"
         )
 
         assert exc.message == "User has exceeded maximum daily transactions"
@@ -219,15 +215,9 @@ class TestBusinessRuleViolation:
 
     def test_create_business_rule_violation_with_context(self):
         """Test creating business rule violation with context."""
-        context = {
-            "user_id": "user-123",
-            "current_count": 10,
-            "max_allowed": 5
-        }
+        context = {"user_id": "user-123", "current_count": 10, "max_allowed": 5}
         exc = BusinessRuleViolation(
-            "MAX_DAILY_TRANSACTIONS",
-            "Too many transactions",
-            context=context
+            "MAX_DAILY_TRANSACTIONS", "Too many transactions", context=context
         )
 
         assert exc.message == "Too many transactions"
@@ -262,9 +252,7 @@ class TestBusinessRuleViolation:
         """Test business rule violation can be raised."""
         with pytest.raises(BusinessRuleViolation) as exc_info:
             raise BusinessRuleViolation(
-                "INSUFFICIENT_FUNDS",
-                "Account balance too low",
-                {"balance": 100, "required": 500}
+                "INSUFFICIENT_FUNDS", "Account balance too low", {"balance": 100, "required": 500}
             )
 
         assert "Account balance too low" in str(exc_info.value)

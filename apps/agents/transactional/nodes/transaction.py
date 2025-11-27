@@ -25,28 +25,19 @@ def transaction_node(state: TransactionalState) -> dict:
     amount = state.get("amount")
     validation_id = state.get("validation_id")
 
-    logger.info(
-        "transaction_node_start",
-        phone=phone,
-        amount=amount,
-        validation_id=validation_id
-    )
+    logger.info("transaction_node_start", phone=phone, amount=amount, validation_id=validation_id)
 
     if not phone or not amount:
         logger.error("transaction_node_missing_data", phone=phone, amount=amount)
         return {
             "transaction_status": "failed",
-            "messages": [
-                AIMessage(content="Error: No se puede ejecutar sin teléfono y monto.")
-            ],
+            "messages": [AIMessage(content="Error: No se puede ejecutar sin teléfono y monto.")],
         }
 
     # Execute transaction
-    result = execute_transaction_tool.invoke({
-        "phone": phone,
-        "amount": amount,
-        "validation_id": validation_id
-    })
+    result = execute_transaction_tool.invoke(
+        {"phone": phone, "amount": amount, "validation_id": validation_id}
+    )
 
     if result.get("success"):
         # Success
@@ -55,13 +46,13 @@ def transaction_node(state: TransactionalState) -> dict:
             phone=phone,
             amount=amount,
             transaction_id=result.get("transaction_id"),
-            message=result.get("message", "")
+            message=result.get("message", ""),
         )
 
         logger.info(
             "transaction_node_success",
             transaction_id=result.get("transaction_id"),
-            status=result.get("status")
+            status=result.get("status"),
         )
 
         return {
@@ -69,23 +60,15 @@ def transaction_node(state: TransactionalState) -> dict:
             "transaction_status": result.get("status", "completed"),
             "messages": [AIMessage(content=message)],
         }
-    else:
-        # Failed
-        error = result.get("error", "Error desconocido")
-        message = get_transaction_result_message(
-            success=False,
-            phone=phone,
-            amount=amount,
-            message=error
-        )
+    # Failed
+    error = result.get("error", "Error desconocido")
+    message = get_transaction_result_message(
+        success=False, phone=phone, amount=amount, message=error
+    )
 
-        logger.error(
-            "transaction_node_failed",
-            error=error,
-            status=result.get("status")
-        )
+    logger.error("transaction_node_failed", error=error, status=result.get("status"))
 
-        return {
-            "transaction_status": "failed",
-            "messages": [AIMessage(content=message)],
-        }
+    return {
+        "transaction_status": "failed",
+        "messages": [AIMessage(content=message)],
+    }

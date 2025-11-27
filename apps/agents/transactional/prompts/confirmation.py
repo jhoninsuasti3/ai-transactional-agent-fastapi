@@ -14,8 +14,7 @@ DATOS:
 Pregunta al usuario si confirma el envío. Sé breve."""
 
 CONFIRMATION_REQUEST = PromptTemplate.from_template(
-    CONFIRMATION_REQUEST_PROMPT,
-    template_format="jinja2"
+    CONFIRMATION_REQUEST_PROMPT, template_format="jinja2"
 )
 
 
@@ -31,6 +30,5 @@ REGLAS:
 Responde solo: confirmed, cancelled o pending"""
 
 CONFIRMATION_DETECTION = PromptTemplate.from_template(
-    CONFIRMATION_DETECTION_PROMPT,
-    template_format="jinja2"
+    CONFIRMATION_DETECTION_PROMPT, template_format="jinja2"
 )

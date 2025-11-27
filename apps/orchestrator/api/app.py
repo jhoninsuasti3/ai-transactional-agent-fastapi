@@ -4,35 +4,35 @@ Enterprise-grade FastAPI application with proper lifecycle management,
 middleware, exception handlers, and API versioning.
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 # Temporarily commented out until we fix import paths
 # from apps.orchestrator.api.exception_handlers.handlers import register_exception_handlers
 from apps.orchestrator.api.health.router import health_router
+from apps.orchestrator.databases.postgres import close_db
+from apps.orchestrator.settings import settings
+
 # from apps.orchestrator.api.middlewares.logging import LoggingMiddleware
 # from apps.orchestrator.api.middlewares.request_id import RequestIDMiddleware
 from apps.orchestrator.v1.routers.router import api_v1_router
-from apps.orchestrator.databases.postgres import close_db
-from apps.orchestrator.settings import settings
 
 logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager.
 
     Handles startup and shutdown events.
 
     Args:
-        app: FastAPI application instance
+        _app: FastAPI application instance (unused, required by FastAPI signature)
 
     Yields:
         None: Application is running
@@ -126,7 +126,7 @@ async def root() -> dict:
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "description": "AI-powered transactional agent for money transfers",
-        "docs_url": f"/docs" if settings.is_development else None,
+        "docs_url": "/docs" if settings.is_development else None,
         "health_url": "/health",
         "api": {
             "v1": f"{settings.API_PREFIX}/v1",
