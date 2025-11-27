@@ -19,4 +19,4 @@ class TestConstants:
 
     def test_langgraph_recursion_limit_value(self):
         """Test LANGGRAPH_RECURSION_LIMIT has expected value."""
-        assert LANGGRAPH_RECURSION_LIMIT == 5
+        assert LANGGRAPH_RECURSION_LIMIT == 25
