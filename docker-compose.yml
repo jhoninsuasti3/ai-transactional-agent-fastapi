@@ -1,23 +1,4 @@
 services:
-  # Redis Cache & Queue
-  redis:
-    image: redis:7-alpine
-    container_name: transactional-agent-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - agent-network
-
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
@@ -83,7 +64,6 @@ services:
       - LANGGRAPH_CHECKPOINT_DB=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-transactional_agent}
       # Services
       - TRANSACTION_SERVICE_URL=http://mock-api:8001
-      - REDIS_URI=redis://redis:6379
       # API
       - API_HOST=0.0.0.0
       - API_PORT=8002
@@ -91,8 +71,6 @@ services:
       - "8002:8002"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       mock-api:
         condition: service_healthy
@@ -116,5 +94,3 @@ networks:
 volumes:
   postgres_data:
     name: transactional-agent-postgres-data
-  redis_data:
-    name: transactional-agent-redis-data
