@@ -7,8 +7,9 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.27-purple.svg)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
-[![Tests](https://img.shields.io/badge/Tests-455%20passing-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/Coverage-78%25-green.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-420%20passing-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/Coverage-80%25-brightgreen.svg)](tests/)
+[![CI](https://img.shields.io/badge/CI-Passing-success.svg)](.github/workflows/ci.yml)
 
 ---
 
@@ -112,7 +113,7 @@ make down            # Detener servicios
 | **Base de Datos** | PostgreSQL 16 | Persistencia ACID |
 | **ORM** | SQLAlchemy 2.0+ | Async, type-safe |
 | **HTTP Client** | httpx | Async, resiliente |
-| **Testing** | pytest | 455 tests, 78% coverage |
+| **Testing** | pytest | 420 tests, 80% coverage |
 | **Package Manager** | uv | Ultra-rápido |
 
 ### Componentes del Sistema
@@ -181,7 +182,7 @@ make down            # Detener servicios
 │       └── core/                 # Config, logging, exceptions
 │
 ├── 📁 mock_api/                  # Mock API externo
-├── 📁 tests/                     # Tests (455 tests, 78% coverage)
+├── 📁 tests/                     # Tests (420 tests, 80% coverage)
 ├── 📁 alembic/                   # Migraciones de DB
 ├── 📁 docker/                    # Dockerfiles
 ├── 📁 docs/                      # Documentación completa
@@ -275,7 +276,7 @@ curl http://localhost:8002/api/v1/transactions/{transaction_id}
 
 ## 🧪 Testing
 
-El proyecto mantiene **78% de cobertura** con **455 tests**.
+El proyecto mantiene **80% de cobertura** con **420 tests** (verificado en CI).
 
 ```bash
 # Ejecutar todos los tests
@@ -431,12 +432,13 @@ make test                           # Ejecutar tests
 ## 📊 Métricas del Proyecto
 
 - **Líneas de código**: ~3,500 (sin tests)
-- **Test Coverage**: 78% (455 tests)
-  - Tests unitarios: 200+
-  - Tests de integración: 50+
+- **Test Coverage**: 80% (420 tests)
+  - Tests unitarios: 385
+  - Tests de integración: 35
+- **CI/CD**: Pipeline completamente funcional
 - **Endpoints API**: 6+
 - **Servicios Docker**: 3 (postgres, orchestrator, mock-api)
-- **Dependencias**: 50+ paquetes
+- **Dependencias**: 50+ paquetes (gestionadas con uv)
 
 ---
 

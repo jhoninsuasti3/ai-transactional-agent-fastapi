@@ -17,26 +17,78 @@
 Este proyecto incluye 3 workflows de CI/CD:
 
 ### CI (Continuous Integration) - `ci.yml`
-✅ Se ejecuta en cada push/PR a `main` o `develop`
-- Linting (ruff)
-- Tests unitarios e integración
-- Cobertura de código (≥70%)
-- Security scan (bandit, safety)
-- Build de Docker image
+✅ **Activo** - Se ejecuta en cada push/PR a `main` o `develop`
+- **Linting**: Ruff para calidad de código
+- **Tests**: Unitarios + integración con PostgreSQL (420 tests)
+- **Coverage**: Verificación dedicada ≥70% (actualmente 80%)
+- **Security**: Bandit + Safety scan
+- **Build**: Validación de imagen Docker
+
+**Estado**: ✅ Pipeline completamente funcional
 
 ### CD AWS ECS - `cd-aws.yml`
-🚀 Deploy automático a AWS ECS/Fargate
-- Ejecuta tests antes del deploy
+🔒 **Deshabilitado** - Deploy a AWS ECS/Fargate
 - Build y push a ECR
 - Deploy a ECS con rolling update
 - Smoke tests post-deployment
 - Notificaciones Slack
 
+**Estado**: 📋 Código base listo
+- ⏳ Requiere ajustes en Terraform
+- ⏳ Requiere configuración AWS + GitHub Secrets
+- ⏳ Requiere pruebas end-to-end
+
 ### CD AWS EC2 - `cd-ec2.yml`
-🖥️ Deploy alternativo a instancia EC2
+🔒 **Deshabilitado** - Deploy a instancia EC2
 - Deploy directo con SSH
 - Backup automático
 - Rollback en caso de fallo
+
+**Estado**: 📋 Código base listo
+- ⏳ Requiere provisionar instancia EC2
+- ⏳ Requiere configurar SSH keys
+- ⏳ Requiere pruebas end-to-end
+
+---
+
+## 🏗️ Infrastructure as Code (IaC)
+
+El proyecto incluye infraestructura básica definida con **Terraform** en `aws/terraform/`:
+
+### Componentes Terraform existentes:
+- 📝 **VPC** con subnets públicas y privadas
+- 📝 **RDS PostgreSQL** configuración básica
+- 📝 **ECS Cluster** para containers
+- 📝 **Security Groups** y networking
+- 📝 **IAM Roles** y políticas
+- 📝 **S3 backend** para Terraform state
+
+### Tareas pendientes para CD completo:
+
+**Terraform:**
+- ⏳ Validar y ajustar configuraciones de recursos
+- ⏳ Completar variables faltantes (endpoints, ARNs, etc.)
+- ⏳ Añadir outputs necesarios para CD workflows
+- ⏳ Probar `terraform plan` y `terraform apply`
+- ⏳ Configurar remote state (bucket S3)
+
+**AWS:**
+- ⏳ Crear y configurar IAM user para GitHub Actions
+- ⏳ Configurar AWS credentials (ACCESS_KEY, SECRET_KEY)
+- ⏳ Crear bucket S3 para Terraform state
+- ⏳ Provisionar infraestructura inicial con Terraform
+
+**GitHub Secrets:**
+- ⏳ Agregar `AWS_ACCESS_KEY_ID`
+- ⏳ Agregar `AWS_SECRET_ACCESS_KEY`
+- ⏳ Agregar variables de producción (DB, endpoints)
+
+**CD Workflows:**
+- ⏳ Remover `if: false` de jobs de deploy
+- ⏳ Ajustar nombres de recursos AWS en workflows
+- ⏳ Probar workflow completo en staging
+
+**Estado**: 📋 Código base listo, requiere configuración y pruebas end-to-end
 
 ---
 
@@ -257,42 +309,60 @@ sudo systemctl start ai-transactional-agent
 
 ## 🚀 Workflows Disponibles
 
-### CI Workflow (`ci.yml`)
+### CI Workflow (`ci.yml`) ✅
 
 **Trigger:** Push o PR a `main`/`develop`
 
 **Jobs:**
-1. **lint** - Verificación de código
-2. **test** - Tests con PostgreSQL
-3. **security** - Escaneo de seguridad
-4. **build** - Build de Docker image
-5. **summary** - Resumen de resultados
+1. **lint** - Verificación de código (ruff, mypy)
+2. **test** - Tests unitarios + integración con PostgreSQL
+3. **security** - Escaneo de seguridad (bandit, safety)
+4. **coverage** - Verificación independiente de cobertura ≥70%
+5. **build** - Validación de imagen Docker (Dockerfile.orchestrator)
+6. **summary** - Resumen y validación de todos los jobs
 
-**Criterio de éxito:** Todos los tests deben pasar (≥70% coverage)
+**Criterio de éxito:**
+- ✅ Linting sin errores
+- ✅ 420 tests pasando
+- ✅ Coverage ≥70% (actualmente 80%)
+- ✅ Sin vulnerabilidades críticas
+- ✅ Dockerfile valida
 
-### CD AWS ECS Workflow (`cd-aws.yml`)
+**Gestión de dependencias:** `uv 0.5.11` con `pyproject.toml`
+
+### CD AWS ECS Workflow (`cd-aws.yml`) 🔒
 
 **Trigger:**
-- Push a `main`
+- Después de CI exitoso (workflow_run)
 - Manual dispatch
 
-**Jobs:**
-1. **test** - Ejecutar tests antes del deploy
-2. **build-and-push** - Build y push a ECR
-3. **deploy-ecs** - Deploy a ECS Fargate
-4. **smoke-test** - Verificar health después del deploy
-5. **notify** - Notificar resultado
+**Jobs activos:**
+1. **check-ci** - Verifica que CI haya pasado
+2. **test** - Safety check adicional
 
-**Environments:** `staging` / `production`
+**Jobs deshabilitados (requieren AWS):**
+- ~~build-and-push~~ - Build y push a ECR
+- ~~deploy-ecs~~ - Deploy a ECS Fargate
+- ~~smoke-test~~ - Health checks
+- ~~notify~~ - Notificaciones Slack
 
-### CD EC2 Workflow (`cd-ec2.yml`)
+**Para activar:** Configurar AWS credentials y remover `if: false`
 
-**Trigger:** Push a `main`
+### CD EC2 Workflow (`cd-ec2.yml`) 🔒
 
-**Jobs:**
-1. **test** - Ejecutar tests
-2. **deploy** - Deploy a EC2 con SSH
-3. **rollback** - Rollback automático si falla
+**Trigger:**
+- Después de CI exitoso (workflow_run)
+- Manual dispatch
+
+**Jobs activos:**
+1. **check-ci** - Verifica que CI haya pasado
+2. **test** - Safety check adicional
+
+**Jobs deshabilitados (requieren EC2):**
+- ~~deploy~~ - Deploy a EC2 con SSH
+- ~~rollback~~ - Rollback automático
+
+**Para activar:** Configurar instancia EC2 y SSH keys, remover `if: false`
 
 ---
 
