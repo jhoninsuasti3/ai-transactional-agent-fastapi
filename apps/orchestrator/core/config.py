@@ -66,7 +66,7 @@ class Settings(BaseSettings):
 
     # OpenAI (for LangGraph agent in production)
     OPENAI_API_KEY: str = Field(
-        ...,  # Required
+        default="",
         description="OpenAI API key for the agent",
     )
     OPENAI_MODEL: str = Field(
@@ -203,7 +203,8 @@ def validate_settings() -> None:
     if settings.is_production and settings.SECRET_KEY == "your-secret-key-change-in-production":  # noqa: S105
         raise ValueError("SECRET_KEY must be changed in production")
 
-    if not settings.OPENAI_API_KEY:
+    # Only require OPENAI_API_KEY in production and development, not in testing
+    if not settings.OPENAI_API_KEY and settings.ENVIRONMENT not in ["testing", "test"]:
         raise ValueError("OPENAI_API_KEY is required")
 
 
