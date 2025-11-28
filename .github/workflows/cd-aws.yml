@@ -1,7 +1,10 @@
 name: CD - Deploy to AWS
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI - Tests and Quality Checks"]
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch:
@@ -23,9 +26,19 @@ env:
   ECS_TASK_DEFINITION: ai-transactional-agent-task
 
 jobs:
+  # Only run if CI workflow succeeded
+  check-ci:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: CI passed
+        run: echo "✅ CI workflow completed successfully or manually triggered"
+
   test:
     name: Run Tests Before Deploy
     runs-on: ubuntu-latest
+    needs: [check-ci]
 
     services:
       postgres:
@@ -62,13 +75,13 @@ jobs:
 
       - name: Install uv
         run: |
-          curl -LsSf https://astral.sh/uv/0.4.18/install.sh | sh
+          curl -LsSf https://astral.sh/uv/0.5.11/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |
           uv venv
-          uv pip install -r requirements.txt -r requirements-dev.txt
+          uv sync --all-groups
 
       - name: Run tests
         run: |
@@ -79,6 +92,7 @@ jobs:
     name: Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
     needs: [test]
+    if: false  # Disabled - AWS credentials not configured
     outputs:
       image: ${{ steps.build-image.outputs.image }}
 
@@ -135,6 +149,7 @@ jobs:
     name: Deploy to ECS
     runs-on: ubuntu-latest
     needs: [build-and-push]
+    if: false  # Disabled - AWS credentials not configured
     environment:
       name: ${{ github.event.inputs.environment || 'staging' }}
       url: ${{ steps.deploy.outputs.service-url }}
@@ -239,6 +254,7 @@ jobs:
     name: Smoke Tests
     runs-on: ubuntu-latest
     needs: [deploy-ecs]
+    if: false  # Disabled - deploy-ecs is disabled
 
     steps:
       - name: Checkout code
@@ -289,7 +305,7 @@ jobs:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
     needs: [deploy-ecs, smoke-test]
-    if: always()
+    if: false  # Disabled - deploy jobs are disabled
 
     steps:
       - name: Send Slack notification
