@@ -1,12 +1,12 @@
-# Architecture Documentation
+# Documentación de Arquitectura
 
-## Overview
+## Resumen
 
-**AI Transactional Agent** is a conversational AI system built with FastAPI and LangGraph that processes financial transactions through natural language conversations. The system implements Clean Architecture principles with hexagonal patterns for scalability and maintainability.
+**AI Transactional Agent** es un sistema de IA conversacional construido con FastAPI y LangGraph que procesa transacciones financieras mediante lenguaje natural. El sistema implementa principios de Clean Architecture con patrones hexagonales para escalabilidad y mantenibilidad.
 
-## System Architecture
+## Arquitectura del Sistema
 
-### High-Level Components
+### Componentes de Alto Nivel
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -66,7 +66,7 @@
                               └───────────────────────┘
 ```
 
-### Component Diagram (Mermaid)
+### Diagrama de Componentes (Mermaid)
 
 ```mermaid
 graph TB
@@ -113,21 +113,21 @@ graph TB
     style MockAPI fill:#d4edda
 ```
 
-### Key Design Decisions
+### Decisiones Clave de Diseño
 
-**1. Agent Integration**
-- The LangGraph agent runs **in-process** within the orchestrator, not as a separate service
-- Imported directly in `apps/orchestrator/v1/routers/chat.py:apps/orchestrator/v1/routers/chat.py`
-- Simplifies deployment and reduces latency
+**1. Integración del Agente**
+- El agente LangGraph se ejecuta **en-proceso** dentro del orchestrator, no como servicio separado
+- Importado directamente en `apps/orchestrator/v1/routers/chat.py`
+- Simplifica el deployment y reduce latencia
 
-**2. Services**
-- ✅ **Orchestrator** (Docker) - Port 8002
-- ✅ **Mock API** (Docker) - Port 8001
-- ✅ **PostgreSQL** (Docker) - Port 5432
+**2. Servicios**
+- ✅ **Orchestrator** (Docker) - Puerto 8002
+- ✅ **Mock API** (Docker) - Puerto 8001
+- ✅ **PostgreSQL** (Docker) - Puerto 5432
 
-## Layered Architecture
+## Arquitectura en Capas
 
-### Project Structure
+### Estructura del Proyecto
 
 ```
 apps/
@@ -164,28 +164,28 @@ apps/
 │       └── logging.py      # Logging configuration
 ```
 
-### Architectural Patterns
+### Patrones Arquitectónicos
 
-**1. Clean Architecture / Hexagonal Architecture**
-- **Domain**: Pure business logic, framework-independent
-- **Application**: Use cases and services
-- **Infrastructure**: Technical implementations (DB, HTTP, etc.)
-- **API**: Presentation layer (FastAPI routers)
+**1. Clean Architecture / Arquitectura Hexagonal**
+- **Domain**: Lógica de negocio pura, independiente del framework
+- **Application**: Casos de uso y servicios
+- **Infrastructure**: Implementaciones técnicas (DB, HTTP, etc.)
+- **API**: Capa de presentación (routers FastAPI)
 
-**2. Repository Pattern**
-Abstracts persistence layer:
+**2. Patrón Repository**
+Abstrae la capa de persistencia:
 
 ```python
 from apps.orchestrator.domain.ports.repository_port import ConversationRepository
 
 class ConversationRepositoryImpl(ConversationRepository):
     async def create(self, conversation: Conversation) -> Conversation:
-        # SQLAlchemy implementation
+        # Implementación con SQLAlchemy
         ...
 ```
 
-**3. Dependency Injection**
-FastAPI dependencies for testing and modularity:
+**3. Inyección de Dependencias**
+Dependencias de FastAPI para testing y modularidad:
 
 ```python
 @router.post("/chat")
@@ -196,9 +196,9 @@ async def chat(
     ...
 ```
 
-## LangGraph Agent Architecture
+## Arquitectura del Agente LangGraph
 
-### Agent State Machine Diagram
+### Diagrama de Máquina de Estados del Agente
 
 ```mermaid
 stateDiagram-v2
@@ -224,22 +224,22 @@ stateDiagram-v2
     conversation_node --> [*]: end_conversation
 
     note right of extractor_node
-        Extract phone + amount
-        from natural language
+        Extrae teléfono y monto
+        del lenguaje natural
     end note
 
     note right of validator_node
-        Call external API
-        to validate data
+        Llama API externa
+        para validar datos
     end note
 
     note right of transaction_node
-        Execute transaction
-        via external API
+        Ejecuta transacción
+        vía API externa
     end note
 ```
 
-### Agent State Machine (Text)
+### Máquina de Estados del Agente (Texto)
 
 ```
 START → conversation → should_extract
@@ -261,99 +261,99 @@ START → conversation → should_extract
                          transaction → conversation → END
 ```
 
-### Agent State
+### Estado del Agente
 
 ```python
 class ConversationState(MessagesState):
-    """State for the transactional agent."""
+    """Estado del agente transaccional."""
 
-    # Transaction data
+    # Datos de la transacción
     phone: Optional[str] = None
     amount: Optional[float] = None
     currency: str = "COP"
 
-    # Validation
+    # Validación
     validation_status: Optional[Literal["pending", "valid", "invalid"]] = None
     validation_error: Optional[str] = None
 
-    # Confirmation
+    # Confirmación
     confirmation: Optional[Literal["pending", "confirmed", "cancelled"]] = None
 
-    # Result
+    # Resultado
     transaction_id: Optional[str] = None
     transaction_status: Optional[Literal["pending", "completed", "failed"]] = None
 
-    # Metadata
+    # Metadatos
     conversation_id: str
     user_id: Optional[str] = None
 ```
 
-### Agent Nodes
+### Nodos del Agente
 
 **1. conversation_node** (apps/agents/transactional/nodes/conversation.py)
-- Handles user interaction
-- Generates conversational responses
-- Guides the conversation flow
+- Maneja la interacción con el usuario
+- Genera respuestas conversacionales
+- Guía el flujo de la conversación
 
 **2. extractor_node** (apps/agents/transactional/nodes/extractor.py)
-- Extracts phone number and amount from context
-- Uses LLM structured output
-- Returns: phone, amount
+- Extrae número de teléfono y monto del contexto
+- Usa salida estructurada del LLM
+- Retorna: phone, amount
 
 **3. validator_node** (apps/agents/transactional/nodes/validator.py)
-- Validates transaction with Mock API
+- Valida la transacción con la API Mock
 - POST /api/v1/transactions/validate
-- Handles validation errors
+- Maneja errores de validación
 
 **4. confirmation_node** (apps/agents/transactional/nodes/confirmation.py)
-- Requests user confirmation
-- Shows transaction summary
-- Waits for "yes/no" response
+- Solicita confirmación del usuario
+- Muestra resumen de la transacción
+- Espera respuesta "sí/no"
 
 **5. transaction_node** (apps/agents/transactional/nodes/transaction.py)
-- Executes transaction
+- Ejecuta la transacción
 - POST /api/v1/transactions/execute
-- Returns transaction ID
+- Retorna el ID de transacción
 
-### Conditional Routes
+### Rutas Condicionales
 
 ```python
 def should_extract(state: ConversationState) -> str:
-    """Route after conversation: extract or end."""
-    # If already have phone and amount, validate
+    """Ruta después de la conversación: extraer o finalizar."""
+    # Si ya tenemos teléfono y monto, validar
     if state.get("phone") and state.get("amount"):
         return "validate"
 
-    # Detect transactional keywords
+    # Detectar palabras clave transaccionales
     messages = state.get("messages", [])
     transaction_keywords = ["envía", "enviar", "transferir", "$", "pesos", "número"]
 
     if last_user_msg and any(keyword in last_user_msg for keyword in transaction_keywords):
         return "extract"
 
-    # Simple conversation → END
+    # Conversación simple → END
     return END
 ```
 
-## Data Persistence
+## Persistencia de Datos
 
-### Database Strategy
+### Estrategia de Base de Datos
 
-**PostgreSQL** is used for all persistent data:
+**PostgreSQL** se utiliza para todos los datos persistentes:
 
-**✅ What to store:**
-- LangGraph Checkpoints - Agent state between messages
-- Domain Data - conversations, transactions, messages tables
-- Audit - Transaction logs
+**✅ Qué almacenar:**
+- LangGraph Checkpoints - Estado del agente entre mensajes
+- Datos de Dominio - tablas de conversations, transactions, messages
+- Auditoría - Logs de transacciones
 
-**Why PostgreSQL:**
-- ACID compliant
-- Complex SQL queries
-- Low cost (disk vs RAM)
-- Easy debugging
-- Scales to millions of conversations
+**Por qué PostgreSQL:**
+- Cumple con ACID
+- Consultas SQL complejas
+- Bajo costo (disco vs RAM)
+- Fácil debugging
+- Escala a millones de conversaciones
 
-### Database Schema
+### Esquema de Base de Datos
 
 ```sql
 -- Conversations
@@ -390,29 +390,29 @@ CREATE TABLE messages (
 -- (created automatically by PostgresSaver)
 ```
 
-### Connection Strings
+### Cadenas de Conexión
 
 ```python
-# For LangGraph (uses psycopg)
+# Para LangGraph (usa psycopg)
 LANGGRAPH_CHECKPOINT_DB = "postgresql+psycopg://user:pass@host:5432/db"
 
-# For SQLAlchemy (uses asyncpg)
+# Para SQLAlchemy (usa asyncpg)
 DATABASE_URL = "postgresql+asyncpg://user:pass@host:5432/db"
 ```
 
-## API Endpoints
+## Endpoints de la API
 
-### Orchestrator (port 8002)
+### Orchestrator (puerto 8002)
 
-| Method | Endpoint | Description |
+| Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/v1/` | API info |
-| POST | `/api/v1/chat` | Chat with agent |
-| GET | `/api/v1/conversations/{id}` | Get conversation |
-| GET | `/api/v1/transactions/{id}` | Get transaction |
+| GET | `/health` | Verificación de salud |
+| GET | `/api/v1/` | Información de la API |
+| POST | `/api/v1/chat` | Chat con el agente |
+| GET | `/api/v1/conversations/{id}` | Obtener conversación |
+| GET | `/api/v1/transactions/{id}` | Obtener transacción |
 
-**Chat Request Schema:**
+**Esquema de Petición Chat:**
 ```json
 {
   "message": "Envía $50000 al 3001234567",
@@ -421,7 +421,7 @@ DATABASE_URL = "postgresql+asyncpg://user:pass@host:5432/db"
 }
 ```
 
-**Chat Response Schema:**
+**Esquema de Respuesta Chat:**
 ```json
 {
   "response": "He procesado tu transferencia...",
@@ -436,18 +436,18 @@ DATABASE_URL = "postgresql+asyncpg://user:pass@host:5432/db"
 }
 ```
 
-### Mock API (port 8001)
+### Mock API (puerto 8001)
 
-| Method | Endpoint | Description |
+| Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/health` | Health check |
-| POST | `/api/v1/transactions/validate` | Validate transaction |
-| POST | `/api/v1/transactions/execute` | Execute transaction |
-| GET | `/api/v1/transactions/{id}` | Get transaction status |
+| GET | `/health` | Verificación de salud |
+| POST | `/api/v1/transactions/validate` | Validar transacción |
+| POST | `/api/v1/transactions/execute` | Ejecutar transacción |
+| GET | `/api/v1/transactions/{id}` | Obtener estado de transacción |
 
-## Complete Flows
+## Flujos Completos
 
-### Flow 1: Simple Conversation (No Transaction)
+### Flujo 1: Conversación Simple (Sin Transacción)
 
 ```
 1. User: "Hola, ¿cómo estás?"
@@ -477,27 +477,27 @@ DATABASE_URL = "postgresql+asyncpg://user:pass@host:5432/db"
    }
 ```
 
-### Flow 2: Successful Transaction
+### Flujo 2: Transacción Exitosa
 
-#### Sequence Diagram (Mermaid)
+#### Diagrama de Secuencia (Mermaid)
 
 ```mermaid
 sequenceDiagram
-    participant U as User
+    participant U as Usuario
     participant API as FastAPI
-    participant Agent as LangGraph Agent
+    participant Agent as Agente LangGraph
     participant DB as PostgreSQL
-    participant Mock as Mock API
+    participant Mock as API Mock
 
     U->>+API: POST /api/v1/chat<br/>"Envía $75000 al 3109876543"
     API->>+Agent: invoke(state)
 
     Note over Agent: conversation_node
-    Agent->>Agent: Generate response
+    Agent->>Agent: Generar respuesta
 
     Note over Agent: should_extract() = True
     Note over Agent: extractor_node
-    Agent->>Agent: Extract phone=3109876543<br/>amount=75000
+    Agent->>Agent: Extraer phone=3109876543<br/>amount=75000
 
     Note over Agent: should_validate() = True
     Note over Agent: validator_node
@@ -506,15 +506,15 @@ sequenceDiagram
 
     Note over Agent: should_confirm() = True
     Note over Agent: confirmation_node
-    Agent->>Agent: Set needs_confirmation=true
+    Agent->>Agent: Configurar needs_confirmation=true
     Agent-->>-API: "Confirmas envío de $75,000..."
-    API-->>-U: Response with confirmation request
+    API-->>-U: Respuesta con solicitud de confirmación
 
     U->>+API: POST /api/v1/chat<br/>"Sí, confirmo"
     API->>+Agent: invoke(state)
 
     Note over Agent: confirmation_node
-    Agent->>Agent: Detect confirmation
+    Agent->>Agent: Detectar confirmación
 
     Note over Agent: should_execute() = True
     Note over Agent: transaction_node
@@ -532,54 +532,54 @@ sequenceDiagram
     API-->>-U: "Transacción completada"
 ```
 
-#### Text Flow
+#### Flujo de Texto
 
 ```
-1. User: "Envía $75000 al 3109876543"
+1. Usuario: "Envía $75000 al 3109876543"
    ↓
 2. POST /api/v1/chat
    ↓
 3. LangGraph:
-   conversation_node → generates initial response
+   conversation_node → genera respuesta inicial
    ↓
-   should_extract() → detects keywords: "Envía", "$", number
+   should_extract() → detecta palabras clave: "Envía", "$", número
    ↓
-   extractor_node → extracts phone=3109876543, amount=75000
+   extractor_node → extrae phone=3109876543, amount=75000
    ↓
-   should_validate() → has phone and amount
+   should_validate() → tiene phone y amount
    ↓
-   validator_node → calls Mock API POST /validate
+   validator_node → llama a Mock API POST /validate
    ↓
 4. Mock API:
-   Validates: phone 10 digits ✓
-             amount > 1000 and < 5000000 ✓
+   Valida: teléfono 10 dígitos ✓
+          monto > 1000 y < 5000000 ✓
    ↓
-   Returns: {"is_valid": true, "validation_id": "VAL-xyz"}
+   Retorna: {"is_valid": true, "validation_id": "VAL-xyz"}
    ↓
 5. LangGraph:
    should_confirm() → state["needs_confirmation"] = true
    ↓
-   confirmation_node → requests confirmation
+   confirmation_node → solicita confirmación
    ↓
-6. User: "Sí, confirmo"
+6. Usuario: "Sí, confirmo"
    ↓
 7. LangGraph:
    should_execute() → state["confirmed"] = true
    ↓
-   transaction_node → calls Mock API POST /execute
+   transaction_node → llama a Mock API POST /execute
    ↓
 8. Mock API:
-   Executes transaction (70% success, 20% pending, 10% failed)
+   Ejecuta transacción (70% éxito, 20% pendiente, 10% fallo)
    ↓
-   Returns: {"transaction_id": "TXN-123", "status": "completed"}
+   Retorna: {"transaction_id": "TXN-123", "status": "completed"}
    ↓
-9. conversation_node → generates confirmation message
+9. conversation_node → genera mensaje de confirmación
    ↓
-10. Saves in PostgreSQL:
+10. Guarda en PostgreSQL:
     - LangGraph checkpoint
-    - Transaction record
+    - Registro de transacción
    ↓
-11. Response:
+11. Respuesta:
     {
       "response": "Tu transferencia de $75,000 ha sido completada...",
       "transaction_id": "TXN-123",
@@ -587,51 +587,51 @@ sequenceDiagram
     }
 ```
 
-## Multi-LLM Support
+## Soporte Multi-LLM
 
-### Configuration
+### Configuración
 
-The system supports multiple LLM providers via environment variable:
+El sistema soporta múltiples proveedores LLM mediante variable de entorno:
 
 ```python
 # .env
-LLM_PROVIDER=openai  # or anthropic
+LLM_PROVIDER=openai  # o anthropic
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**Benefits:**
-- ✅ Flexibility to switch providers without code changes
-- ✅ Use specific models (GPT-4o-mini vs Claude 3.5 Sonnet)
-- ✅ Risk mitigation if one provider fails
-- ✅ Cost optimization based on use case
+**Beneficios:**
+- ✅ Flexibilidad para cambiar proveedores sin cambios de código
+- ✅ Usar modelos específicos (GPT-4o-mini vs Claude 3.5 Sonnet)
+- ✅ Mitigación de riesgo si un proveedor falla
+- ✅ Optimización de costos basada en caso de uso
 
-## Resilience Patterns
+## Patrones de Resiliencia
 
-### HTTP Client with Resilience
+### Cliente HTTP con Resiliencia
 
-The system implements:
-- **Retry with exponential backoff**: 3 attempts with 1s, 2s, 4s delays
-- **Circuit breaker**: Opens after 5 failures, resets after 60s
-- **Timeouts**: Connection timeout 5s, read timeout 10s
+El sistema implementa:
+- **Retry con backoff exponencial**: 3 intentos con delays de 1s, 2s, 4s
+- **Circuit breaker**: Se abre tras 5 fallos, se resetea tras 60s
+- **Timeouts**: Timeout de conexión 5s, timeout de lectura 10s
 
-### Circuit Breaker States
+### Estados del Circuit Breaker
 
 ```
-CLOSED → (5 failures) → OPEN
+CLOSED → (5 fallos) → OPEN
   ↑                       ↓
-  └─ (success) ← HALF_OPEN ← (60s timeout)
+  └─ (éxito) ← HALF_OPEN ← (60s timeout)
 ```
 
-## Configuration
+## Configuración
 
-### Critical Settings
+### Configuraciones Críticas
 
-In `apps/orchestrator/core/config.py`:
+En `apps/orchestrator/core/config.py`:
 
 ```python
 class Settings(BaseSettings):
-    # Application
+    # Aplicación
     APP_NAME: str = "AI Transactional Agent"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "staging", "production", "testing"]
@@ -640,32 +640,32 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8002
 
-    # Database
+    # Base de datos
     DATABASE_URL: str  # postgresql+asyncpg://...
     LANGGRAPH_CHECKPOINT_DB: str  # postgresql+psycopg://...
 
     # OpenAI
-    OPENAI_API_KEY: str  # Required
+    OPENAI_API_KEY: str  # Requerido
     OPENAI_MODEL: str = "gpt-4o-mini"
     OPENAI_TEMPERATURE: float = 0.7
 
-    # Transaction Service
+    # Servicio de Transacciones
     TRANSACTION_SERVICE_URL: str = "http://localhost:8001"
 
-    # Resilience
+    # Resiliencia
     MAX_RETRIES: int = 3
     CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = 5
     CIRCUIT_BREAKER_RESET_TIMEOUT: int = 60
 ```
 
-### Environment Variables
+### Variables de Entorno
 
 ```bash
-# Application
+# Aplicación
 ENVIRONMENT=development
 DEBUG=true
 
-# Database (PostgreSQL)
+# Base de datos (PostgreSQL)
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/transactional_agent
 LANGGRAPH_CHECKPOINT_DB=postgresql+psycopg://postgres:postgres@postgres:5432/transactional_agent
 
@@ -673,37 +673,37 @@ LANGGRAPH_CHECKPOINT_DB=postgresql+psycopg://postgres:postgres@postgres:5432/tra
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
 
-# Services
+# Servicios
 TRANSACTION_SERVICE_URL=http://mock-api:8001
 ```
 
-## Testing Strategy
+## Estrategia de Testing
 
 ```
 tests/
-├── unit/               # Unit tests
-│   ├── agents/         # Agent tests
-│   └── orchestrator/   # Orchestrator tests
-├── integration/        # Integration tests
+├── unit/               # Tests unitarios
+│   ├── agents/         # Tests de agentes
+│   └── orchestrator/   # Tests de orchestrator
+├── integration/        # Tests de integración
 │   ├── test_chat_integration.py
 │   └── test_transaction_flows.py
-└── conftest.py        # Pytest fixtures
+└── conftest.py        # Fixtures de Pytest
 ```
 
-**Current Coverage: 74%**
+**Cobertura Actual: 80%**
 
 ## Deployment
 
 ### Docker Compose
 
 ```bash
-# Build and start services
+# Construir e iniciar servicios
 docker compose up -d --build
 
-# Check health
+# Verificar salud
 make health
 
-# View logs
+# Ver logs
 docker compose logs -f orchestrator
 ```
 
@@ -717,26 +717,26 @@ curl http://localhost:8001/health
 curl http://localhost:8002/health
 ```
 
-## Middleware Stack
+## Stack de Middleware
 
-Order is important:
+El orden es importante:
 
-1. **RequestIDMiddleware**: Assigns unique ID to each request
-2. **LoggingMiddleware**: Logs requests/responses
-3. **CORSMiddleware**: Handles CORS
-4. **Exception Handlers**: Centralized error handling
+1. **RequestIDMiddleware**: Asigna ID único a cada petición
+2. **LoggingMiddleware**: Registra peticiones/respuestas
+3. **CORSMiddleware**: Maneja CORS
+4. **Exception Handlers**: Manejo centralizado de errores
 
-## Exception Handling
+## Manejo de Excepciones
 
-Centralized exception handling system:
+Sistema de manejo de excepciones centralizado:
 
 ```python
 from apps.orchestrator.domain.exceptions.base import EntityNotFoundError
 
-# In code
+# En el código
 raise EntityNotFoundError("Conversation", conversation_id)
 
-# Automatically converts to:
+# Automáticamente se convierte a:
 # {
 #   "error": "Conversation with id '123' not found",
 #   "details": {"entity_name": "Conversation", "entity_id": 123},
@@ -744,74 +744,74 @@ raise EntityNotFoundError("Conversation", conversation_id)
 # }
 ```
 
-## LLM Cost Optimization
+## Optimización de Costos LLM
 
-### Strategies to Reduce Costs
+### Estrategias para Reducir Costos
 
-**1. Use Mini/Nano Models**
+**1. Usar Modelos Mini/Nano**
 ```python
-OPENAI_MODEL = "gpt-4o-mini"  # ~10x less tokens than GPT-4
+OPENAI_MODEL = "gpt-4o-mini"  # ~10x menos tokens que GPT-4
 ```
 
-**2. Limit History**
+**2. Limitar Historial**
 ```python
-MAX_HISTORY_MESSAGES = 10  # Only last 10 messages
+MAX_HISTORY_MESSAGES = 10  # Solo los últimos 10 mensajes
 messages_to_send = messages[-MAX_HISTORY_MESSAGES:]
 ```
 
-**3. Concise System Prompts**
+**3. System Prompts Concisos**
 ```python
-# Good (concise)
+# Bueno (conciso)
 """Asistente de transferencias. Solicita: teléfono (10 dígitos), monto.
 Pide confirmación antes de ejecutar."""
 
-# Bad (verbose)
+# Malo (verboso)
 """You are a helpful assistant that helps users transfer money.
 You should be polite, professional, and always ask for confirmation..."""
 ```
 
-**4. Context Truncation**
+**4. Truncado de Contexto**
 ```python
 MAX_TOKENS_PER_MESSAGE = 500
 truncated_content = message.content[:MAX_TOKENS_PER_MESSAGE]
 ```
 
-## Critical Fixes Applied
+## Correcciones Críticas Aplicadas
 
-### 1. Infinite Recursion Fix
+### 1. Corrección de Recursión Infinita
 
-**Problem:**
+**Problema:**
 ```
 conversation → should_extract → extract
       ↑                            ↓
       └──────── conversation ←──────┘
-               (INFINITE LOOP)
+               (BUCLE INFINITO)
 ```
 
-**Solution:**
-Added conditional routing to END for simple conversations:
+**Solución:**
+Se agregó enrutamiento condicional a END para conversaciones simples:
 
 ```python
 def should_extract(state: ConversationState) -> str:
-    """Route after conversation: extract or end."""
-    # ... detection logic
-    return END  # For simple conversations
+    """Ruta después de la conversación: extraer o finalizar."""
+    # ... lógica de detección
+    return END  # Para conversaciones simples
 ```
 
-### 2. LangGraph Checkpoint Configuration
+### 2. Configuración de LangGraph Checkpoint
 
-Added `LANGGRAPH_CHECKPOINT_DB` with correct format:
+Se agregó `LANGGRAPH_CHECKPOINT_DB` con formato correcto:
 
 ```python
-# LangGraph uses psycopg (not asyncpg)
+# LangGraph usa psycopg (no asyncpg)
 LANGGRAPH_CHECKPOINT_DB = "postgresql+psycopg://user:pass@host:5432/db"
 ```
 
-## References
+## Referencias
 
-- **Project README**: `/README.md`
-- **Docker Setup**: `docs/DOCKER.md`
-- **Testing Guide**: `docs/TESTING.md`
-- **Development Guide**: `docs/DEVELOPMENT.md`
-- **LangGraph Documentation**: https://langchain-ai.github.io/langgraph/
-- **FastAPI Documentation**: https://fastapi.tiangolo.com/
+- **README del Proyecto**: `/README.md`
+- **Configuración Docker**: `docs/DOCKER.md`
+- **Guía de Testing**: `docs/TESTING.md`
+- **Guía de Desarrollo**: `docs/DEVELOPMENT.md`
+- **Documentación LangGraph**: https://langchain-ai.github.io/langgraph/
+- **Documentación FastAPI**: https://fastapi.tiangolo.com/
