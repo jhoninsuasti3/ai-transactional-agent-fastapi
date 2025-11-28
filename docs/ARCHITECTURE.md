@@ -66,6 +66,53 @@
                               └───────────────────────┘
 ```
 
+### Component Diagram (Mermaid)
+
+```mermaid
+graph TB
+    User[Cliente/Usuario]
+
+    subgraph Orchestrator["Orchestrator Container (Port 8002)"]
+        API[FastAPI Application<br/>/api/v1/chat]
+
+        subgraph Agent["LangGraph Agent (In-Process)"]
+            Conv[conversation_node]
+            Extr[extractor_node]
+            Valid[validator_node]
+            Conf[confirmation_node]
+            Trans[transaction_node]
+
+            Conv -->|should_extract?| Extr
+            Conv -->|no extract| EndConv[END]
+            Extr -->|should_validate?| Valid
+            Extr -->|missing data| Conv
+            Valid -->|should_confirm?| Conf
+            Valid -->|invalid| Conv
+            Conf -->|should_execute?| Trans
+            Conf -->|cancel| EndCancel[END]
+            Trans --> EndTrans[END]
+        end
+
+        Persist[Persistence Service]
+        Client[Transaction Client]
+    end
+
+    DB[(PostgreSQL<br/>Port 5432)]
+    MockAPI[Mock Transaction API<br/>Port 8001]
+
+    User -->|POST /api/v1/chat| API
+    API --> Agent
+    Agent --> Persist
+    Agent --> Client
+    Persist -->|Store| DB
+    Client -->|HTTP| MockAPI
+
+    style Orchestrator fill:#e1f5ff
+    style Agent fill:#fff3cd
+    style DB fill:#d4edda
+    style MockAPI fill:#d4edda
+```
+
 ### Key Design Decisions
 
 **1. Agent Integration**
@@ -151,7 +198,48 @@ async def chat(
 
 ## LangGraph Agent Architecture
 
-### Agent State Machine
+### Agent State Machine Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> conversation_node
+
+    conversation_node --> should_extract
+    should_extract --> extractor_node: needs_extraction
+    should_extract --> [*]: simple_conversation
+
+    extractor_node --> should_validate
+    should_validate --> validator_node: has_data
+    should_validate --> conversation_node: missing_data
+
+    validator_node --> should_confirm
+    should_confirm --> confirmation_node: valid
+    should_confirm --> conversation_node: invalid
+
+    confirmation_node --> should_execute
+    should_execute --> transaction_node: confirmed
+    should_execute --> [*]: cancelled
+
+    transaction_node --> conversation_node: success/failure
+    conversation_node --> [*]: end_conversation
+
+    note right of extractor_node
+        Extract phone + amount
+        from natural language
+    end note
+
+    note right of validator_node
+        Call external API
+        to validate data
+    end note
+
+    note right of transaction_node
+        Execute transaction
+        via external API
+    end note
+```
+
+### Agent State Machine (Text)
 
 ```
 START → conversation → should_extract
@@ -390,6 +478,61 @@ DATABASE_URL = "postgresql+asyncpg://user:pass@host:5432/db"
 ```
 
 ### Flow 2: Successful Transaction
+
+#### Sequence Diagram (Mermaid)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant API as FastAPI
+    participant Agent as LangGraph Agent
+    participant DB as PostgreSQL
+    participant Mock as Mock API
+
+    U->>+API: POST /api/v1/chat<br/>"Envía $75000 al 3109876543"
+    API->>+Agent: invoke(state)
+
+    Note over Agent: conversation_node
+    Agent->>Agent: Generate response
+
+    Note over Agent: should_extract() = True
+    Note over Agent: extractor_node
+    Agent->>Agent: Extract phone=3109876543<br/>amount=75000
+
+    Note over Agent: should_validate() = True
+    Note over Agent: validator_node
+    Agent->>+Mock: POST /validate
+    Mock-->>-Agent: {"is_valid": true, "validation_id": "VAL-xyz"}
+
+    Note over Agent: should_confirm() = True
+    Note over Agent: confirmation_node
+    Agent->>Agent: Set needs_confirmation=true
+    Agent-->>-API: "Confirmas envío de $75,000..."
+    API-->>-U: Response with confirmation request
+
+    U->>+API: POST /api/v1/chat<br/>"Sí, confirmo"
+    API->>+Agent: invoke(state)
+
+    Note over Agent: confirmation_node
+    Agent->>Agent: Detect confirmation
+
+    Note over Agent: should_execute() = True
+    Note over Agent: transaction_node
+    Agent->>+Mock: POST /execute
+    Mock-->>-Agent: {"transaction_id": "TXN-123", "status": "completed"}
+
+    Agent->>+DB: Save transaction
+    DB-->>-Agent: Stored
+    Agent->>+DB: Save checkpoint
+    DB-->>-Agent: Stored
+
+    Note over Agent: conversation_node
+    Agent->>Agent: Generate success message
+    Agent-->>-API: Success with TXN-123
+    API-->>-U: "Transacción completada"
+```
+
+#### Text Flow
 
 ```
 1. User: "Envía $75000 al 3109876543"
