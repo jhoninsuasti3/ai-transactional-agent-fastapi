@@ -153,12 +153,12 @@ jobs:
       - name: Run unit tests
         run: |
           source .venv/bin/activate
-          pytest tests/unit/ -v --tb=short --junitxml=reports/unit-tests.xml
+          pytest tests/unit/ -v --tb=short --junitxml=reports/unit-tests.xml --no-cov
 
       - name: Run integration tests
         run: |
           source .venv/bin/activate
-          pytest tests/integration/ -v --tb=short --junitxml=reports/integration-tests.xml
+          pytest tests/integration/ -v --tb=short --junitxml=reports/integration-tests.xml --no-cov
 
       - name: Run all tests with coverage
         run: |
@@ -168,7 +168,6 @@ jobs:
             --cov-report=xml \
             --cov-report=html \
             --cov-report=term \
-            --cov-fail-under=70 \
             --junitxml=reports/all-tests.xml
 
       - name: Upload coverage to Codecov
@@ -239,6 +238,59 @@ jobs:
           path: |
             bandit-report.json
 
+  coverage:
+    name: Coverage Verification
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/${{ env.UV_VERSION }}/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          uv sync --all-groups
+
+      - name: Run tests with coverage
+        run: |
+          source .venv/bin/activate
+          pytest tests/ \
+            --cov=apps \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-fail-under=70
+        env:
+          ENVIRONMENT: testing
+          DATABASE_URL: sqlite:///./test.db
+          LANGGRAPH_CHECKPOINT_URL: sqlite:///./test.db
+          OPENAI_API_KEY: ""
+          OPENAI_MODEL: gpt-4o-mini
+          TRANSACTION_SERVICE_URL: http://localhost:8001
+          SECRET_KEY: test-secret-key-for-ci-only
+
+      - name: Check coverage threshold
+        run: |
+          source .venv/bin/activate
+          coverage report --fail-under=70
+          COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          echo "Total coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE}% is below the required 70% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage ${COVERAGE}% meets the required 70% threshold"
+
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -263,7 +315,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint, test, security, build]
+    needs: [lint, test, security, coverage, build]
     if: always()
 
     steps:
@@ -272,10 +324,16 @@ jobs:
           echo "Lint status: ${{ needs.lint.result }}"
           echo "Test status: ${{ needs.test.result }}"
           echo "Security status: ${{ needs.security.result }}"
+          echo "Coverage status: ${{ needs.coverage.result }}"
           echo "Build status: ${{ needs.build.result }}"
 
           if [ "${{ needs.test.result }}" != "success" ]; then
             echo "❌ Tests failed!"
+            exit 1
+          fi
+
+          if [ "${{ needs.coverage.result }}" != "success" ]; then
+            echo "❌ Coverage verification failed!"
             exit 1
           fi
 
